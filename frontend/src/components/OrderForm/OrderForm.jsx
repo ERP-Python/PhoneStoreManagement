@@ -69,7 +69,6 @@ export default function OrderForm({ open, onClose, onSuccess }) {
       console.error('Error fetching variants:', err)
     }
   }
-//toi ten la hung 
 
   const handleChange = (e) => {
     const { name, value } = e.target

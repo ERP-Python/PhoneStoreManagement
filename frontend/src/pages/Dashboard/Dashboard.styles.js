@@ -83,6 +83,14 @@ export const dashboardStyles = {
   chartCard: {
     height: '100%',
     border: '1px solid #e2e8f0',
+    overflow: 'visible',
+    '& .MuiCardContent-root': {
+      p: 2.5,
+      overflow: 'visible',
+      '&:last-child': {
+        pb: 2.5,
+      },
+    },
   },
   
   chartTitle: {

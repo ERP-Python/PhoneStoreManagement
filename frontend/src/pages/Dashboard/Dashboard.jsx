@@ -263,25 +263,77 @@ export default function Dashboard() {
               <Typography variant="h6" sx={dashboardStyles.chartTitle}>
                 Phân bố sản phẩm
               </Typography>
-              <Box sx={{ mt: 3, height: 350 }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <Box sx={{ 
+                mt: 2, 
+                height: 350, 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                '& .recharts-wrapper': {
+                  outline: 'none !important',
+                },
+                '& *': {
+                  outline: 'none !important',
+                }
+              }}>
+                <ResponsiveContainer width="100%" height="85%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
+                      innerRadius={0}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                      isAnimationActive={true}
+                      activeIndex={null}
+                      activeShape={null}
                     >
                       {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          style={{ outline: 'none', cursor: 'default' }}
+                        />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      formatter={(value) => `${value}%`}
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  justifyContent: 'center', 
+                  gap: 2,
+                  mt: 1,
+                  px: 2
+                }}>
+                  {pieData.map((entry, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ 
+                        width: 12, 
+                        height: 12, 
+                        backgroundColor: entry.color,
+                        borderRadius: '2px'
+                      }} />
+                      <Typography variant="body2" sx={{ fontSize: '13px', color: '#4A5568' }}>
+                        {entry.name}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             </CardContent>
           </Card>
