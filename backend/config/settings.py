@@ -126,6 +126,10 @@ STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Assets directory for product images
+ASSETS_URL = '/assets/'
+ASSETS_ROOT = BASE_DIR / 'apps' / 'assets'
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

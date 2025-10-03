@@ -63,10 +63,23 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
 
     def get_primary_image(self, obj):
+        # Kiểm tra nếu có ảnh được upload trong database
         primary = obj.images.filter(is_primary=True).first()
         if primary:
             return ProductImageSerializer(primary).data
-        return None
+        
+        # Tự động map ảnh từ 1.jpg đến 12.jpg dựa theo ID sản phẩm
+        # Công thức: ((id - 1) % 12) + 1 để có số từ 1-12
+        image_number = ((obj.id - 1) % 12) + 1
+        image_url = f'/assets/images/{image_number}.jpg'
+        
+        return {
+            'id': None,
+            'image': image_url,
+            'is_primary': True,
+            'sort_order': 0,
+            'created_at': obj.created_at
+        }
     
     def get_price_range(self, obj):
         """Get price range from variants"""

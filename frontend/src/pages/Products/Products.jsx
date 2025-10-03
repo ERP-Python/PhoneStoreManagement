@@ -53,22 +53,22 @@ export default function Products() {
     try {
       setLoading(true)
       setError(null)
-      
+
       const params = {
         page: page + 1,
         page_size: rowsPerPage,
       }
-      
+
       if (searchTerm) {
         params.search = searchTerm
       }
-      
+
       if (brandFilter) {
         params.brand = brandFilter
       }
-      
+
       const response = await api.get('/products/', { params })
-      
+
       setProducts(response.data.results || response.data)
       setTotalCount(response.data.count || response.data.length)
     } catch (err) {
@@ -120,7 +120,7 @@ export default function Products() {
     if (!window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
       return
     }
-    
+
     try {
       await api.delete(`/products/${id}/`)
       fetchProducts()
@@ -265,7 +265,7 @@ export default function Products() {
                 <TableRow key={product.id} hover>
                   <TableCell>
                     <Avatar
-                      src={product.images?.[0]?.image || product.primary_image}
+                      src={product.primary_image?.image || product.images?.[0]?.image || '/assets/images/1.jpg'}
                       alt={product.name}
                       variant="rounded"
                       sx={productsStyles.productAvatar}
@@ -280,8 +280,8 @@ export default function Products() {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={product.variants_count || product.variants?.length || 0} 
+                    <Chip
+                      label={product.variants_count || product.variants?.length || 0}
                       {...productsStyles.variantChip}
                       color={product.variants_count > 0 ? 'primary' : 'default'}
                     />
