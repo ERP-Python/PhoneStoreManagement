@@ -38,7 +38,8 @@ export const layoutStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F5F6FA',
-    height: 72,
+    height: 80,
+    minHeight: 80,
   },
   sidebarTitle: {
     color: '#2D3748',
@@ -110,7 +111,8 @@ export const layoutStyles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     px: 3,
-    py: 2,
+    height: 80,
+    minHeight: 80,
   },
   mobileMenuIcon: {
     mr: 2,
@@ -124,8 +126,8 @@ export const layoutStyles = {
     mr: 2,
   },
   navbarLogoImage: {
-    width: 80,
-    height: 80,
+    width: 50,
+    height: 50,
     borderRadius: 2,
     objectFit: 'contain',
   },
