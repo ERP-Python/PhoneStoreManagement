@@ -77,12 +77,6 @@ export default function Layout() {
     navigate('/login')
   }
 
-  // Get current page title from path
-  const getCurrentPageTitle = () => {
-    const path = location.pathname
-    const menuItem = menuItems.find(item => item.path === path)
-    return menuItem ? menuItem.text : 'Dashboard'
-  }
 
   // Generate breadcrumbs
   const generateBreadcrumbs = () => {
@@ -102,19 +96,11 @@ export default function Layout() {
 
   const drawer = (
     <Box sx={layoutStyles.sidebarContainer}>
-      {/* Sidebar Header with Logo */}
+      {/* Sidebar Header */}
       <Box sx={layoutStyles.sidebarHeader}>
-        <Box sx={layoutStyles.logoContainer}>
-          <Box 
-            component="img"
-            src={logoImage}
-            alt="Phone Store Logo"
-            sx={layoutStyles.logoImage}
-          />
-          <Typography variant="h6" sx={layoutStyles.logoText}>
-            Phone Store
-          </Typography>
-        </Box>
+        <Typography variant="h6" sx={layoutStyles.sidebarTitle}>
+          Menu
+        </Typography>
       </Box>
       
       <Divider sx={{ borderColor: '#e2e8f0' }} />
@@ -152,50 +138,6 @@ export default function Layout() {
         })}
       </List>
       
-      {/* Spacer to push user menu to bottom */}
-      <Box sx={{ flexGrow: 1 }} />
-      
-      {/* User menu in sidebar */}
-      <Box sx={layoutStyles.sidebarFooter}>
-        <Divider sx={{ borderColor: '#e2e8f0', mb: 2 }} />
-        <Box sx={layoutStyles.userSection}>
-          <Avatar sx={layoutStyles.userAvatar}>
-            {user?.username?.charAt(0).toUpperCase()}
-          </Avatar>
-          <Box sx={{ ml: 2, flex: 1 }}>
-            <Typography variant="body2" fontWeight={600} color="#2D3748">
-              {user?.username}
-            </Typography>
-            <Typography variant="caption" color="#718096">
-              {user?.email || 'admin@phonestore.com'}
-            </Typography>
-          </Box>
-          <IconButton 
-            onClick={handleMenu}
-            size="small"
-            sx={{ color: '#718096' }}
-          >
-            <Settings />
-          </IconButton>
-        </Box>
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleClose}
-          sx={layoutStyles.userMenu}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        >
-          <MenuItem onClick={handleClose} sx={layoutStyles.menuItem}>
-            <Settings sx={{ mr: 2 }} />
-            Settings
-          </MenuItem>
-          <MenuItem onClick={handleLogout} sx={layoutStyles.menuItem}>
-            <Logout sx={{ mr: 2 }} />
-            Logout
-          </MenuItem>
-        </Menu>
-      </Box>
     </Box>
   )
 
@@ -232,6 +174,19 @@ export default function Layout() {
         {/* New Header inside main content */}
         <Paper sx={layoutStyles.mainHeader} elevation={0}>
           <Box sx={layoutStyles.headerContent}>
+            {/* Logo in navbar - leftmost position */}
+            <Box sx={layoutStyles.navbarLogoContainer}>
+              <Box 
+                component="img"
+                src={logoImage}
+                alt="Phone Store Logo"
+                sx={layoutStyles.navbarLogoImage}
+              />
+              <Typography variant="h6" sx={layoutStyles.navbarLogoText}>
+                Phone Store
+              </Typography>
+            </Box>
+            
             {/* Mobile menu button */}
             <IconButton
               color="inherit"
@@ -242,19 +197,6 @@ export default function Layout() {
               <MenuIcon />
             </IconButton>
             
-            {/* Page title with logo */}
-            <Box sx={layoutStyles.titleSection}>
-              <Box 
-                component="img"
-                src={logoImage}
-                alt="Logo"
-                sx={layoutStyles.headerLogo}
-              />
-              <Typography variant="h5" sx={layoutStyles.pageTitle}>
-                {getCurrentPageTitle()}
-              </Typography>
-            </Box>
-            
             {/* Right side actions */}
             <Box sx={layoutStyles.headerActions}>
               <IconButton sx={layoutStyles.headerActionButton}>
@@ -263,10 +205,34 @@ export default function Layout() {
               <IconButton sx={layoutStyles.headerActionButton}>
                 <Settings />
               </IconButton>
-              <Avatar sx={layoutStyles.headerAvatar}>
-                {user?.username?.charAt(0).toUpperCase()}
-              </Avatar>
+              <IconButton 
+                onClick={handleMenu}
+                sx={{ p: 0.5 }}
+              >
+                <Avatar sx={layoutStyles.headerAvatar}>
+                  {user?.username?.charAt(0).toUpperCase()}
+                </Avatar>
+              </IconButton>
             </Box>
+            
+            {/* User menu dropdown */}
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+              sx={layoutStyles.userMenu}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <MenuItem onClick={handleClose} sx={layoutStyles.menuItem}>
+                <Settings sx={{ mr: 2 }} />
+                Settings
+              </MenuItem>
+              <MenuItem onClick={handleLogout} sx={layoutStyles.menuItem}>
+                <Logout sx={{ mr: 2 }} />
+                Logout
+              </MenuItem>
+            </Menu>
           </Box>
         </Paper>
         
