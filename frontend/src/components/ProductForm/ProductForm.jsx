@@ -18,9 +18,7 @@ import {
   Typography,
   IconButton,
   Divider,
-  Paper,
-  Autocomplete,
-  InputAdornment
+  Paper
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import api from '../../api/axios'
@@ -39,33 +37,8 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
     { ram: '', rom: '', color: '', sku: '', price: '', is_active: true }
   ])
   const [brands, setBrands] = useState([])
-  const [productSuggestions, setProductSuggestions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [validationErrors, setValidationErrors] = useState({})
-
-  // Utility function to get first character of color and uppercase it
-  const getColorCode = (color) => {
-    if (!color) return ''
-    // Normalize Vietnamese characters and get first character uppercase
-    const normalized = color.trim().charAt(0).toUpperCase()
-    return normalized
-  }
-
-  // Utility function to format price with thousand separators
-  const formatPrice = (value) => {
-    if (!value) return ''
-    // Remove all non-digit characters
-    const numValue = value.toString().replace(/\D/g, '')
-    // Add thousand separators
-    return numValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  }
-
-  // Utility function to parse formatted price back to number
-  const parsePrice = (value) => {
-    if (!value) return ''
-    return value.toString().replace(/\./g, '')
-  }
 
   useEffect(() => {
     if (open) {
@@ -90,12 +63,10 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             color: v.color || '',
             sku: v.sku || '',
             price: v.price || '',
-            displayPrice: formatPrice(v.price || ''),
-            is_active: v.is_active !== undefined ? v.is_active : true,
-            skuManuallySet: true // SKU from DB is considered manually set
+            is_active: v.is_active !== undefined ? v.is_active : true
           })))
         } else {
-          setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true }])
+          setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', is_active: true }])
         }
       } else {
         // Add mode - reset form
@@ -107,38 +78,11 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           description: '',
           is_active: true
         })
-        setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true }])
-        setProductSuggestions([])
+        setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', is_active: true }])
       }
       setError(null)
-      setValidationErrors({})
     }
   }, [open, product])
-
-  // Fetch products when brand changes
-  useEffect(() => {
-    if (formData.brand && !product) {
-      fetchProductsByBrand(formData.brand)
-    }
-  }, [formData.brand, product])
-
-  // Auto-update variant SKUs when product SKU changes
-  useEffect(() => {
-    if (formData.sku && !product) {
-      const newVariants = variants.map(variant => {
-        // Only update if variant hasn't been manually set
-        if (!variant.id && !variant.skuManuallySet && (variant.ram || variant.rom || variant.color)) {
-          const parts = [formData.sku]
-          if (variant.ram) parts.push(variant.ram.replace(/GB|gb|TB|tb/gi, ''))
-          if (variant.rom) parts.push(variant.rom.replace(/GB|gb|TB|tb/gi, ''))
-          if (variant.color) parts.push(getColorCode(variant.color))
-          return { ...variant, sku: parts.join('-') }
-        }
-        return variant
-      })
-      setVariants(newVariants)
-    }
-  }, [formData.sku])
 
   const fetchBrands = async () => {
     try {
@@ -149,123 +93,14 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
     }
   }
 
-  const fetchProductsByBrand = async (brandId) => {
-    try {
-      const response = await api.get('/products/', {
-        params: { brand: brandId, page_size: 100 }
-      })
-      setProductSuggestions(response.data.results || response.data)
-    } catch (err) {
-      console.error('Error fetching products:', err)
-      setProductSuggestions([])
-    }
-  }
-
-  const validateField = (field, value, variantIndex = null) => {
-    const errors = { ...validationErrors }
-    const key = variantIndex !== null ? `variant_${variantIndex}_${field}` : field
-
-    switch (field) {
-      case 'name':
-        if (value && value.length < 2) {
-          errors[key] = 'Tên sản phẩm phải có ít nhất 2 ký tự'
-        } else {
-          delete errors[key]
-        }
-        break
-
-      case 'sku':
-        if (value && !/^[A-Za-z0-9\-_]+$/.test(value)) {
-          errors[key] = 'SKU chỉ được chứa chữ, số, dấu gạch ngang và gạch dưới'
-        } else if (value && value.length < 2) {
-          errors[key] = 'SKU phải có ít nhất 2 ký tự'
-        } else {
-          delete errors[key]
-        }
-        break
-
-      case 'ram':
-      case 'rom':
-        if (value && !/^\d+\s?(GB|TB|gb|tb)?$/i.test(value)) {
-          errors[key] = `${field.toUpperCase()} phải có định dạng: 8GB, 256GB, 1TB...`
-        } else {
-          delete errors[key]
-        }
-        break
-
-      case 'color':
-        if (value && value.length < 2) {
-          errors[key] = 'Màu sắc phải có ít nhất 2 ký tự'
-        } else if (value && !/^[a-zA-ZÀ-ỹ\s]+$/.test(value)) {
-          errors[key] = 'Màu sắc chỉ được chứa chữ cái'
-        } else {
-          delete errors[key]
-        }
-        break
-
-      case 'price':
-        const numValue = parseFloat(parsePrice(value))
-        if (value && (isNaN(numValue) || numValue < 0)) {
-          errors[key] = 'Giá phải là số dương'
-        } else if (value && numValue < 1000) {
-          errors[key] = 'Giá phải lớn hơn 1,000 VNĐ'
-        } else if (value && numValue > 999999999) {
-          errors[key] = 'Giá không được vượt quá 999,999,999 VNĐ'
-        } else {
-          delete errors[key]
-        }
-        break
-
-      case 'barcode':
-        if (value && !/^\d+$/.test(value)) {
-          errors[key] = 'Barcode chỉ được chứa số'
-        } else if (value && (value.length < 8 || value.length > 13)) {
-          errors[key] = 'Barcode phải có từ 8-13 ký tự'
-        } else {
-          delete errors[key]
-        }
-        break
-
-      default:
-        delete errors[key]
-    }
-
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target
     const newValue = type === 'checkbox' ? checked : value
 
     setFormData(prev => ({
       ...prev,
-      [name]: newValue
+      [name]: type === 'checkbox' ? checked : value
     }))
-
-    // Validate on change
-    if (type !== 'checkbox') {
-      validateField(name, newValue)
-    }
-  }
-
-  const handleProductSelect = (event, selectedProduct) => {
-    if (selectedProduct && typeof selectedProduct === 'object') {
-      // User selected an existing product from suggestions
-      setFormData(prev => ({
-        ...prev,
-        name: selectedProduct.name,
-        sku: selectedProduct.sku,
-        barcode: selectedProduct.barcode || '',
-        description: selectedProduct.description || ''
-      }))
-    } else if (typeof selectedProduct === 'string') {
-      // User typed a new product name
-      setFormData(prev => ({
-        ...prev,
-        name: selectedProduct
-      }))
-    }
   }
 
   const handleVariantChange = (index, field, value) => {
@@ -299,9 +134,9 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
       const v = newVariants[index]
       if (v.ram || v.rom || v.color) {
         const parts = [formData.sku]
-        if (v.ram) parts.push(v.ram.replace(/GB|gb|TB|tb/gi, ''))
-        if (v.rom) parts.push(v.rom.replace(/GB|gb|TB|tb/gi, ''))
-        if (v.color) parts.push(getColorCode(v.color))
+        if (v.ram) parts.push(v.ram.replace(/GB|gb/gi, ''))
+        if (v.rom) parts.push(v.rom.replace(/GB|gb/gi, ''))
+        if (v.color) parts.push(v.color.substring(0, 1).toUpperCase())
         newVariants[index].sku = parts.join('-')
       }
     }
@@ -310,7 +145,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
   }
 
   const handleAddVariant = () => {
-    setVariants([...variants, { ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true }])
+    setVariants([...variants, { ram: '', rom: '', color: '', sku: '', price: '', is_active: true }])
   }
 
   const handleRemoveVariant = (index) => {
@@ -350,47 +185,6 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
       errors.brand = 'Vui lòng chọn thương hiệu'
       isValid = false
     }
-
-    // Validate variants
-    variants.forEach((variant, index) => {
-      if (!variant.sku) {
-        errors[`variant_${index}_sku`] = 'SKU biến thể là bắt buộc'
-        isValid = false
-      } else if (!/^[A-Za-z0-9\-_]+$/.test(variant.sku)) {
-        errors[`variant_${index}_sku`] = 'SKU chỉ được chứa chữ, số, dấu gạch ngang và gạch dưới'
-        isValid = false
-      }
-
-      const priceValue = parseFloat(variant.price)
-      if (!variant.price || priceValue < 1000) {
-        errors[`variant_${index}_price`] = 'Giá phải lớn hơn 1,000 VNĐ'
-        isValid = false
-      } else if (priceValue > 999999999) {
-        errors[`variant_${index}_price`] = 'Giá không được vượt quá 999,999,999 VNĐ'
-        isValid = false
-      }
-
-      // Validate RAM format if provided
-      if (variant.ram && !/^\d+\s?(GB|TB|gb|tb)?$/i.test(variant.ram)) {
-        errors[`variant_${index}_ram`] = 'RAM phải có định dạng: 8GB, 16GB...'
-        isValid = false
-      }
-
-      // Validate ROM format if provided
-      if (variant.rom && !/^\d+\s?(GB|TB|gb|tb)?$/i.test(variant.rom)) {
-        errors[`variant_${index}_rom`] = 'ROM phải có định dạng: 256GB, 512GB, 1TB...'
-        isValid = false
-      }
-
-      // Validate color if provided
-      if (variant.color && !/^[a-zA-ZÀ-ỹ\s]+$/.test(variant.color)) {
-        errors[`variant_${index}_color`] = 'Màu sắc chỉ được chứa chữ cái'
-        isValid = false
-      }
-    })
-
-    setValidationErrors(errors)
-    return isValid
   }
 
   const handleSubmit = async (e) => {
@@ -471,16 +265,6 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
     }
   }
 
-  const getErrorMessage = (field, variantIndex = null) => {
-    const key = variantIndex !== null ? `variant_${variantIndex}_${field}` : field
-    return validationErrors[key] || ''
-  }
-
-  const hasError = (field, variantIndex = null) => {
-    const key = variantIndex !== null ? `variant_${variantIndex}_${field}` : field
-    return !!validationErrors[key]
-  }
-
   return (
     <Dialog open={open} onClose={onClose} {...productFormStyles.dialog}>
       <form onSubmit={handleSubmit}>
@@ -500,7 +284,19 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           </Typography>
           <Grid container spacing={productFormStyles.gridSpacing}>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth required error={hasError('brand')}>
+              <TextField
+                fullWidth
+                required
+                label="Tên sản phẩm"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="VD: iPhone 15 Pro Max"
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
                 <InputLabel>Thương hiệu</InputLabel>
                 <Select
                   name="brand"
@@ -518,41 +314,6 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <Autocomplete
-                freeSolo
-                options={productSuggestions}
-                getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
-                value={formData.name}
-                onChange={handleProductSelect}
-                onInputChange={(event, newInputValue) => {
-                  setFormData(prev => ({ ...prev, name: newInputValue }))
-                  validateField('name', newInputValue)
-                }}
-                disabled={!formData.brand || !!product}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    required
-                    label="Tên sản phẩm"
-                    placeholder="VD: iPhone 15 Pro Max"
-                    error={hasError('name')}
-                    helperText={getErrorMessage('name') || (!formData.brand ? "Vui lòng chọn thương hiệu trước" : "")}
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <li {...props} key={option.id}>
-                    <Box>
-                      <Typography variant="body1">{option.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        SKU: {option.sku}
-                      </Typography>
-                    </Box>
-                  </li>
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 required
@@ -561,8 +322,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
                 value={formData.sku}
                 onChange={handleChange}
                 placeholder="VD: IP15PM"
-                error={hasError('sku')}
-                helperText={getErrorMessage('sku') || "Mã SKU duy nhất cho sản phẩm"}
+                {...productFormStyles.helperText}
               />
             </Grid>
 
@@ -574,8 +334,6 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
                 value={formData.barcode}
                 onChange={handleChange}
                 placeholder="VD: 1234567890123"
-                error={hasError('barcode')}
-                helperText={getErrorMessage('barcode') || "8-13 chữ số"}
               />
             </Grid>
 
@@ -633,8 +391,6 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
                     onChange={(e) => handleVariantChange(index, 'ram', e.target.value)}
                     placeholder="8GB"
                     size="small"
-                    error={hasError('ram', index)}
-                    helperText={getErrorMessage('ram', index)}
                   />
                 </Grid>
                 <Grid item xs={12} sm={2}>
@@ -645,8 +401,6 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
                     onChange={(e) => handleVariantChange(index, 'rom', e.target.value)}
                     placeholder="256GB"
                     size="small"
-                    error={hasError('rom', index)}
-                    helperText={getErrorMessage('rom', index)}
                   />
                 </Grid>
                 <Grid item xs={12} sm={2}>
@@ -657,8 +411,6 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
                     onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
                     placeholder="Đen"
                     size="small"
-                    error={hasError('color', index)}
-                    helperText={getErrorMessage('color', index)}
                   />
                 </Grid>
                 <Grid item xs={12} sm={3}>
@@ -668,26 +420,21 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
                     label="SKU Biến thể"
                     value={variant.sku}
                     onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
-                    placeholder="SS24U-23-225-Đ"
+                    placeholder="IP15PM-8-256-D"
                     size="small"
-                    error={hasError('sku', index)}
-                    helperText={getErrorMessage('sku', index)}
                   />
                 </Grid>
                 <Grid item xs={12} sm={2}>
                   <TextField
                     fullWidth
                     required
-                    label="Giá"
-                    value={variant.displayPrice || ''}
+                    type="number"
+                    label="Giá (VNĐ)"
+                    value={variant.price}
                     onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
-                    placeholder="34.990.000"
+                    placeholder="34990000"
                     size="small"
-                    error={hasError('price', index)}
-                    helperText={getErrorMessage('price', index)}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">VNĐ</InputAdornment>,
-                    }}
+                    inputProps={{ min: 0 }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={1}>
