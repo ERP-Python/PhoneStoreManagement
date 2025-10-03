@@ -154,24 +154,6 @@ export const layoutStyles = {
     fontWeight: 600,
     ml: 1,
   },
-  breadcrumbContainer: {
-    mx: 3,
-    mt: 0,
-    p: 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
-    border: '1px solid #E2E8F0',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-  },
-  breadcrumbs: {
-    '& .MuiBreadcrumbs-separator': {
-      color: '#94a3b8',
-    },
-  },
-  breadcrumbItem: {
-    fontSize: '0.9rem',
-    fontWeight: 500,
-  },
   content: {
     flex: 1,
     p: 3,
