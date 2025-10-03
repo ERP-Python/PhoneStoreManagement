@@ -78,6 +78,10 @@ export default function Dashboard() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
 
+  const handleOrdersClick = () => {
+    navigate('/orders')
+  }
+
   const handleCustomersClick = () => {
     navigate('/customers')
   }
@@ -205,6 +209,7 @@ export default function Dashboard() {
             color="primary"
             change={8.2}
             changeType="increase"
+            onClick={handleOrdersClick}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
