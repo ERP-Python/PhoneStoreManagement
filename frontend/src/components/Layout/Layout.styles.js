@@ -38,25 +38,7 @@ export const layoutStyles = {
     justifyContent: 'center',
     backgroundColor: '#F5F6FA',
   },
-  logoContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#667eea',
-    fontSize: '1.2rem',
-    color: '#fff',
-  },
-  logoImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 2,
-    objectFit: 'contain',
-  },
-  logoText: {
+  sidebarTitle: {
     color: '#2D3748',
     fontWeight: 700,
     fontSize: '1.3rem',
@@ -105,26 +87,6 @@ export const layoutStyles = {
     },
   },
 
-  // Sidebar Footer
-  sidebarFooter: {
-    p: 2,
-  },
-  userSection: {
-    display: 'flex',
-    alignItems: 'center',
-    p: 2,
-    borderRadius: 2,
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-  },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    backgroundColor: '#667eea',
-    color: '#fff',
-    fontSize: '0.9rem',
-    fontWeight: 600,
-  },
 
   // Main content styles
   main: {
@@ -150,24 +112,25 @@ export const layoutStyles = {
   },
   mobileMenuIcon: {
     mr: 2,
-    display: { sm: 'none' },
+    display: { xs: 'block', sm: 'none' },
     color: '#2D3748',
   },
-  titleSection: {
+  navbarLogoContainer: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    flex: 1,
+    mr: 2,
   },
-  headerLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 1,
+  navbarLogoImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 2,
     objectFit: 'contain',
   },
-  pageTitle: {
-    fontWeight: 600,
+  navbarLogoText: {
     color: '#2D3748',
+    fontWeight: 700,
+    fontSize: '1.3rem',
   },
   headerActions: {
     display: 'flex',
