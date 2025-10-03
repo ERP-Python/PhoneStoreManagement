@@ -178,7 +178,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def fulfill(self, request, pk=None):
-        """Create Stock Out and fulfill order"""
+        """Create Stock Out record for order (inventory already reduced at order creation)"""
         order = self.get_object()
         
         if order.status != 'paid':
@@ -194,38 +194,36 @@ class OrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Prepare Stock Out data
-        stock_out_data = {
-            'order': order.id,
-            'note': f'Fulfillment for order {order.code}',
-            'items': []
-        }
+        # Inventory already reduced when order was created
+        # Just create StockOut record for tracking without reducing inventory again
+        from django.utils import timezone
+        from .models import StockOutItem
         
-        # Copy items from order
-        for order_item in order.items.all():
-            stock_out_data['items'].append({
-                'product_variant': order_item.product_variant.id,
-                'qty': order_item.qty
-            })
-        
-        # Create Stock Out (this will also reduce inventory)
-        stock_out_serializer = StockOutSerializer(
-            data=stock_out_data,
-            context={'request': request}
+        stock_out = StockOut.objects.create(
+            code=f"OUT-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+            order=order,
+            note=f'Fulfillment for order {order.code}',
+            created_by=request.user
         )
         
-        if stock_out_serializer.is_valid():
-            stock_out = stock_out_serializer.save(created_by=request.user)
-            return Response({
-                'message': 'Order fulfilled successfully',
-                'stock_out': stock_out_serializer.data
-            }, status=status.HTTP_201_CREATED)
+        # Create stock out items (without reducing inventory)
+        for order_item in order.items.all():
+            StockOutItem.objects.create(
+                stock_out=stock_out,
+                product_variant=order_item.product_variant,
+                qty=order_item.qty
+            )
         
-        return Response(stock_out_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = StockOutSerializer(stock_out)
+        return Response({
+            'message': 'Order fulfilled successfully',
+            'stock_out': serializer.data
+        }, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def cancel(self, request, pk=None):
-        """Cancel an order"""
+        """Cancel an order and restore inventory"""
         order = self.get_object()
         
         if order.status == 'paid':
@@ -239,6 +237,38 @@ class OrderViewSet(viewsets.ModelViewSet):
                 {'error': 'Order is already cancelled'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Restore inventory for cancelled order
+        from apps.inventory.models import Inventory, StockMovement
+        
+        for order_item in order.items.all():
+            # Check if inventory was reduced for this order
+            stock_movements = StockMovement.objects.filter(
+                ref_type='Order',
+                ref_id=order.id,
+                product_variant=order_item.product_variant,
+                type='OUT'
+            )
+            
+            if stock_movements.exists():
+                # Restore inventory
+                try:
+                    inventory = Inventory.objects.select_for_update().get(
+                        product_variant=order_item.product_variant
+                    )
+                    inventory.on_hand += order_item.qty
+                    inventory.save()
+                    
+                    # Create stock movement record for restoration
+                    StockMovement.objects.create(
+                        type='IN',
+                        product_variant=order_item.product_variant,
+                        qty=order_item.qty,
+                        ref_type='OrderCancellation',
+                        ref_id=order.id
+                    )
+                except Inventory.DoesNotExist:
+                    logger.error(f'Inventory not found for variant {order_item.product_variant.sku}')
         
         order.status = 'cancelled'
         order.save()
