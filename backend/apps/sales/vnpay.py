@@ -20,8 +20,22 @@ class VNPayService:
         self.vnp_payment_url = settings.VNPAY_PAYMENT_URL
         self.vnp_return_url = settings.VNPAY_RETURN_URL
         
+        # Debug: Log configuration on init
+        logger.info("=" * 80)
+        logger.info("VNPAY SERVICE INITIALIZED")
+        logger.info(f"TMN Code: {self.vnp_tmn_code}")
+        logger.info(f"Hash Secret: {self.vnp_hash_secret[:10]}... (hidden)")
+        logger.info(f"Payment URL: {self.vnp_payment_url}")
+        logger.info(f"Return URL: {self.vnp_return_url}")
+        logger.info("=" * 80)
+        
         # Validate configuration
         if not all([self.vnp_tmn_code, self.vnp_hash_secret, self.vnp_payment_url, self.vnp_return_url]):
+            logger.error("VNPay configuration is INCOMPLETE!")
+            logger.error(f"TMN Code present: {bool(self.vnp_tmn_code)}")
+            logger.error(f"Hash Secret present: {bool(self.vnp_hash_secret)}")
+            logger.error(f"Payment URL present: {bool(self.vnp_payment_url)}")
+            logger.error(f"Return URL present: {bool(self.vnp_return_url)}")
             logger.warning("VNPay configuration is incomplete. Please check your environment variables.")
     
     def create_payment_url(self, order_code, amount, order_desc, ip_addr, bank_code=None, card_type=None):
@@ -71,17 +85,32 @@ class VNPayService:
             
             # Sort and create query string - VNPAY specific format
             sorted_params = sorted(vnp_params.items())
-            query_string = '&'.join([f"{key}={value}" for key, value in sorted_params])
+# URL encode each value properly for VNPay
+            query_string = '&'.join([f"{key}={urllib.parse.quote_plus(str(value))}" for key, value in sorted_params])    
+                    # Debug: Log all parameters
+            logger.info("=" * 80)
+            logger.info(f"CREATE PAYMENT URL FOR ORDER: {order_code}")
+            logger.info("-" * 80)
+            logger.info("VNPAY PARAMETERS:")
+            for key, value in sorted_params:
+                logger.info(f"  {key}: {value}")
+            logger.info("-" * 80)
+            logger.info(f"QUERY STRING: {query_string}")
+            logger.info("-" * 80)
             
             # Create secure hash
             secure_hash = self._create_secure_hash(query_string)
             
+            logger.info(f"SECURE HASH: {secure_hash}")
+            logger.info(f"HASH SECRET USED: {self.vnp_hash_secret[:10]}... (first 10 chars)")
+            logger.info("-" * 80)
+            
             # Final payment URL
             payment_url = f"{self.vnp_payment_url}?{query_string}&vnp_SecureHash={secure_hash}"
             
-            logger.info(f"Created VNPay payment URL for order {order_code}")
-            logger.info(f"Query string: {query_string}")
-            logger.info(f"Secure hash: {secure_hash}")
+            logger.info(f"FINAL PAYMENT URL (length: {len(payment_url)})")
+            logger.info(f"URL: {payment_url[:100]}..." if len(payment_url) > 100 else f"URL: {payment_url}")
+            logger.info("=" * 80)
             
             return payment_url
             
@@ -127,10 +156,27 @@ class VNPayService:
             # Check if payment was successful (response code 00 means success)
             is_success = is_valid and response_code == '00'
             
-            logger.info(f"VNPay response validation - Order: {order_code}, Success: {is_success}, Response Code: {response_code}")
+            # Debug: Log validation details
+            logger.info("=" * 80)
+            logger.info(f"VALIDATE VNPAY RESPONSE FOR ORDER: {order_code}")
+            logger.info("-" * 80)
+            logger.info(f"Response Code: {response_code}")
+            logger.info(f"Transaction No: {txn_code}")
+            logger.info(f"Amount: {amount} VND")
+            logger.info(f"Bank Code: {bank_code}")
+            logger.info(f"Card Type: {card_type}")
+            logger.info(f"Pay Date: {pay_date}")
+            logger.info("-" * 80)
             logger.info(f"Query string for validation: {query_string}")
+            logger.info("-" * 80)
             logger.info(f"Calculated hash: {calculated_hash}")
-            logger.info(f"Received hash: {vnp_secure_hash}")
+            logger.info(f"Received hash:   {vnp_secure_hash}")
+            logger.info(f"Hash match: {calculated_hash == vnp_secure_hash}")
+            logger.info("-" * 80)
+            logger.info(f"Is Valid Signature: {is_valid}")
+            logger.info(f"Is Success (code=='00'): {response_code == '00'}")
+            logger.info(f"FINAL RESULT: {'SUCCESS' if is_success else 'FAILED'}")
+            logger.info("=" * 80)
             
             # Add additional info to response data
             response_data.update({
