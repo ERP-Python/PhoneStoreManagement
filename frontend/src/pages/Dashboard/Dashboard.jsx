@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { 
   Grid, 
   Paper, 
@@ -26,9 +27,21 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import api from '../../api/axios'
 import { dashboardStyles } from './Dashboard.styles'
 
-function StatCard({ title, value, icon, color = 'primary', change, changeType }) {
+function StatCard({ title, value, icon, color = 'primary', change, changeType, onClick }) {
   return (
-    <Card sx={dashboardStyles.statCard} elevation={0}>
+    <Card 
+      sx={{
+        ...dashboardStyles.statCard,
+        cursor: onClick ? 'pointer' : 'default',
+        '&:hover': onClick ? {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          transition: 'all 0.2s ease-in-out'
+        } : {}
+      }} 
+      elevation={0}
+      onClick={onClick}
+    >
       <CardContent sx={dashboardStyles.statCardContent}>
         <Box sx={dashboardStyles.statHeader}>
           <Avatar sx={{ ...dashboardStyles.statIcon, backgroundColor: `${color}.main` }}>
@@ -63,6 +76,15 @@ export default function Dashboard() {
   const [topProducts, setTopProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const navigate = useNavigate()
+
+  const handleOrdersClick = () => {
+    navigate('/orders')
+  }
+
+  const handleCustomersClick = () => {
+    navigate('/customers')
+  }
 
   useEffect(() => {
     fetchStats()
@@ -187,6 +209,7 @@ export default function Dashboard() {
             color="primary"
             change={8.2}
             changeType="increase"
+            onClick={handleOrdersClick}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -207,6 +230,7 @@ export default function Dashboard() {
             color="info"
             change={15.3}
             changeType="increase"
+            onClick={handleCustomersClick}
           />
         </Grid>
       </Grid>
