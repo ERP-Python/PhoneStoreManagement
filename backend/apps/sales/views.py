@@ -108,9 +108,20 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def create_vnpay_payment(self, request, pk=None):
         """Create VNPay payment URL for order"""
+        logger.info("=" * 80)
+        logger.info("API CALL: CREATE VNPAY PAYMENT")
+        logger.info("-" * 80)
+        
         order = self.get_object()
         
+        logger.info(f"Order ID: {order.id}")
+        logger.info(f"Order Code: {order.code}")
+        logger.info(f"Order Total: {order.total} VND")
+        logger.info(f"Order Status: {order.status}")
+        logger.info(f"Customer IP: {self.get_client_ip(request)}")
+        
         if order.status == 'paid':
+            logger.warning(f"Order {order.code} is already paid. Rejecting payment request.")
             return Response(
                 {'error': 'Order is already paid'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -118,6 +129,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         # Get bank code from request (optional)
         bank_code = request.data.get('bank_code', None)
+        logger.info(f"Bank Code: {bank_code if bank_code else 'Not specified'}")
         
         # Create payment record
         payment = Payment.objects.create(
@@ -126,11 +138,14 @@ class OrderViewSet(viewsets.ModelViewSet):
             amount=order.total,
             status='pending'
         )
+        logger.info(f"Payment record created: ID={payment.id}, Status=pending")
         
         # Generate VNPay payment URL
+        logger.info("Initializing VNPayService...")
         vnpay = VNPayService()
         
         try:
+            logger.info("Calling create_payment_url...")
             payment_url = vnpay.create_payment_url(
                 order_code=order.code,
                 amount=float(order.total),
@@ -138,6 +153,10 @@ class OrderViewSet(viewsets.ModelViewSet):
                 ip_addr=self.get_client_ip(request),
                 bank_code=bank_code
             )
+            
+            logger.info(f"Payment URL created successfully")
+            logger.info(f"Sandbox mode: {vnpay.is_sandbox_mode()}")
+            logger.info("=" * 80)
             
             return Response({
                 'payment_id': payment.id,
@@ -149,7 +168,12 @@ class OrderViewSet(viewsets.ModelViewSet):
             })
             
         except Exception as e:
-            logger.error(f"Error creating VNPay payment: {str(e)}")
+            logger.error("=" * 80)
+            logger.error(f"ERROR creating VNPay payment: {str(e)}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error("=" * 80)
             return Response(
                 {'error': 'Failed to create payment URL'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -408,18 +432,30 @@ def vnpay_return(request):
     Handle VNPay return callback
     This is called when user completes payment on VNPay
     """
+    logger.info("=" * 80)
+    logger.info("VNPAY RETURN CALLBACK RECEIVED")
+    logger.info("-" * 80)
+    
     vnpay = VNPayService()
     response_data = request.GET.dict()
     
-    logger.info(f"VNPay return callback received: {response_data}")
+    logger.info("CALLBACK PARAMETERS:")
+    for key, value in response_data.items():
+        logger.info(f"  {key}: {value}")
+    logger.info("-" * 80)
     
     # Validate VNPay response
+    logger.info("Validating VNPay response...")
     is_success, txn_code, amount, order_code, raw_response = vnpay.validate_response(response_data)
     
     try:
         # Find order and payment
+        logger.info(f"Looking for order: {order_code}")
         order = Order.objects.get(code=order_code)
+        logger.info(f"Order found: ID={order.id}, Status={order.status}")
+        
         payment = order.payments.filter(status='pending').order_by('-created_at').first()
+        logger.info(f"Pending payment found: {payment.id if payment else 'None'}")
         
         if payment:
             # Update payment record
@@ -427,6 +463,7 @@ def vnpay_return(request):
             payment.raw_response_json = json.dumps(raw_response)
             
             if is_success:
+                logger.info("Payment validation SUCCESS - Updating records...")
                 payment.status = 'success'
                 payment.paid_at = timezone.now()
                 
@@ -434,28 +471,42 @@ def vnpay_return(request):
                 order.status = 'paid'
                 order.paid_total = amount
                 order.save()
+                logger.info(f"Order {order_code} marked as PAID")
                 
                 # Update revenue statistics
                 _update_revenue_stats(order, payment)
+                logger.info("Revenue statistics updated")
                 
                 logger.info(f"Payment successful for order {order_code}")
             else:
+                logger.warning("Payment validation FAILED - Marking as failed...")
                 payment.status = 'failed'
                 logger.warning(f"Payment failed for order {order_code}")
             
             payment.save()
+            logger.info(f"Payment record updated: Status={payment.status}")
+        else:
+            logger.warning(f"No pending payment found for order {order_code}")
         
         # Redirect to frontend with payment status
         frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:3000'
         redirect_url = f"{frontend_url}/orders/{order.id}?payment_status={'success' if is_success else 'failed'}"
         
+        logger.info(f"Redirecting to: {redirect_url}")
+        logger.info("=" * 80)
         return redirect(redirect_url)
         
     except Order.DoesNotExist:
-        logger.error(f"Order not found: {order_code}")
+        logger.error("=" * 80)
+        logger.error(f"ERROR: Order not found: {order_code}")
+        logger.error("=" * 80)
         return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger.error(f"Error processing VNPay return: {str(e)}")
+        logger.error("=" * 80)
+        logger.error(f"ERROR processing VNPay return: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error("=" * 80)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

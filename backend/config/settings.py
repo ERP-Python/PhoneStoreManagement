@@ -84,7 +84,7 @@ DATABASES = {
         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
         'NAME': os.getenv('DB_NAME', 'phone_store'),
         'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', '12345'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
@@ -172,8 +172,8 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # VNPay Configuration - Sandbox
-VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', '2QXUI4J4')
-VNPAY_HASH_SECRET_KEY = os.getenv('VNPAY_HASH_SECRET_KEY', 'SANDBOXHASHSECRET')
+VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', 'XCO6J35O')
+VNPAY_HASH_SECRET_KEY = os.getenv('VNPAY_HASH_SECRET_KEY', 'QSLJAQXHA0E0NUOPI7XG9O5DVODCGRJD')
 VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', 'http://localhost:8000/api/payments/vnpay/return/')
 VNPAY_PAYMENT_URL = os.getenv('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
 
