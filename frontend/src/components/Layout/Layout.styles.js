@@ -124,29 +124,13 @@ export const layoutStyles = {
   headerContent: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     px: 3,
     py: 2,
   },
   mobileMenuIcon: {
     mr: 2,
     display: { sm: 'none' },
-    color: '#2D3748',
-  },
-  titleSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-    flex: 1,
-  },
-  headerLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 1,
-    objectFit: 'contain',
-  },
-  pageTitle: {
-    fontWeight: 600,
     color: '#2D3748',
   },
   headerActions: {

@@ -77,12 +77,6 @@ export default function Layout() {
     navigate('/login')
   }
 
-  // Get current page title from path
-  const getCurrentPageTitle = () => {
-    const path = location.pathname
-    const menuItem = menuItems.find(item => item.path === path)
-    return menuItem ? menuItem.text : 'Dashboard'
-  }
 
   // Generate breadcrumbs
   const generateBreadcrumbs = () => {
@@ -198,18 +192,6 @@ export default function Layout() {
               <MenuIcon />
             </IconButton>
             
-            {/* Page title with logo */}
-            <Box sx={layoutStyles.titleSection}>
-              <Box 
-                component="img"
-                src={logoImage}
-                alt="Logo"
-                sx={layoutStyles.headerLogo}
-              />
-              <Typography variant="h5" sx={layoutStyles.pageTitle}>
-                {getCurrentPageTitle()}
-              </Typography>
-            </Box>
             
             {/* Right side actions */}
             <Box sx={layoutStyles.headerActions}>
