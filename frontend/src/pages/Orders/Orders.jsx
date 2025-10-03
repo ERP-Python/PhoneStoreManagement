@@ -22,6 +22,7 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material'
+import { useAlert } from '../../context/AlertContext'
 import {
   Add as AddIcon,
   Visibility as ViewIcon,
@@ -37,6 +38,7 @@ import PaymentDialog from '../../components/PaymentDialog/PaymentDialog'
 import { ordersStyles, statusColors, statusLabels } from './Orders.styles'
 
 export default function Orders() {
+  const { showInfo } = useAlert()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -275,7 +277,7 @@ export default function Orders() {
                     <IconButton
                       size="small"
                       color="primary"
-                      onClick={() => alert(`Xem chi tiết đơn hàng #${order.code}`)}
+                      onClick={() => showInfo(`Xem chi tiết đơn hàng #${order.code}`)}
                       title="Xem chi tiết"
                     >
                       <ViewIcon fontSize="small" />
@@ -283,7 +285,7 @@ export default function Orders() {
                     <IconButton
                       size="small"
                       color="info"
-                      onClick={() => alert(`In hóa đơn #${order.code}`)}
+                      onClick={() => showInfo(`In hóa đơn #${order.code}`)}
                       title="In hóa đơn"
                     >
                       <PrintIcon fontSize="small" />
