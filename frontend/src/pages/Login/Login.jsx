@@ -63,8 +63,7 @@ export default function Login() {
                 {/* Avatar Logo */}
                 <Box sx={loginStyles.avatarContainer}>
                   <Avatar sx={loginStyles.avatar}>
-                    {/* <PhoneAndroid sx={loginStyles.avatarIcon} /> */}
-                    <Image src="/logo.png" alt="Logo" width={40} height={40} />
+                    <PhoneAndroid sx={loginStyles.avatarIcon} />
                   </Avatar>
                 </Box>
                 

@@ -36,9 +36,29 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user)
       return { success: true }
     } catch (error) {
+      console.error('Login error:', error)
+      let errorMessage = 'Đăng nhập thất bại'
+      
+      if (error.response) {
+        const data = error.response.data
+        if (data.message) {
+          errorMessage = data.message
+        } else if (data.detail) {
+          errorMessage = data.detail
+        } else if (data.non_field_errors) {
+          errorMessage = data.non_field_errors[0]
+        } else if (data.username) {
+          errorMessage = `Tên đăng nhập: ${data.username[0]}`
+        } else if (data.password) {
+          errorMessage = `Mật khẩu: ${data.password[0]}`
+        }
+      } else if (error.request) {
+        errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra backend đang chạy.'
+      }
+      
       return {
         success: false,
-        error: error.response?.data?.message || 'Login failed'
+        error: errorMessage
       }
     }
   }
