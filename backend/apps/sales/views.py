@@ -8,6 +8,8 @@ from django.shortcuts import redirect
 from django.conf import settings
 import json
 import logging
+from datetime import datetime  # Add this import
+
 
 from .models import Order, Payment, StockOut
 from .serializers import (
@@ -16,6 +18,53 @@ from .serializers import (
 from .vnpay import VNPayService
 
 logger = logging.getLogger(__name__)
+
+
+def _update_revenue_stats(order, payment):
+    """Update revenue statistics when payment is successful"""
+    try:
+        # Import here to avoid circular imports
+        from apps.reports.models import RevenueStats
+        from django.db.models import F
+        from datetime import date
+        
+        # Get or create daily revenue stats
+        stats, created = RevenueStats.objects.get_or_create(
+            date=date.today(),
+            defaults={
+                'total_revenue': 0,
+                'total_orders': 0,
+                'cash_revenue': 0,
+                'vnpay_revenue': 0,
+                'bank_transfer_revenue': 0,
+                'cash_orders': 0,
+                'vnpay_orders': 0,
+                'bank_transfer_orders': 0,
+            }
+        )
+        
+        # Update totals
+        stats.total_revenue = F('total_revenue') + payment.amount
+        stats.total_orders = F('total_orders') + 1
+        
+        # Update method-specific stats
+        if payment.method == 'cash':
+            stats.cash_revenue = F('cash_revenue') + payment.amount
+            stats.cash_orders = F('cash_orders') + 1
+        elif payment.method == 'vnpay':
+            stats.vnpay_revenue = F('vnpay_revenue') + payment.amount
+            stats.vnpay_orders = F('vnpay_orders') + 1
+        elif payment.method == 'bank_transfer':
+            stats.bank_transfer_revenue = F('bank_transfer_revenue') + payment.amount
+            stats.bank_transfer_orders = F('bank_transfer_orders') + 1
+        
+        stats.save()
+        
+        logger.info(f"Updated revenue stats for {payment.method} payment: {payment.amount}")
+        
+    except Exception as e:
+        logger.error(f"Failed to update revenue stats: {str(e)}")
+        # Don't fail the payment if revenue stats update fails
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -209,6 +258,51 @@ class OrderViewSet(viewsets.ModelViewSet):
             'payments': serializer.data
         })
     
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def create_cash_payment(self, request, pk=None):
+        """Create cash payment for order"""
+        order = self.get_object()
+        
+        if order.status == 'paid':
+            return Response(
+                {'error': 'Order is already paid'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        amount = request.data.get('amount', order.total)
+        note = request.data.get('note', '')
+        
+        # Create payment record
+        payment = Payment.objects.create(
+            order=order,
+            method='cash',
+            amount=amount,
+            status='success',
+            paid_at=timezone.now(),
+            ip_address=self.get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+        )
+        
+        # Update order status
+        order.status = 'paid'
+        order.paid_total = amount
+        order.save()
+        
+        # Update revenue statistics
+        _update_revenue_stats(order, payment)
+        
+        logger.info(f"Cash payment created for order {order.code}")
+        
+        return Response({
+            'payment_id': payment.id,
+            'order_code': order.code,
+            'amount': float(amount),
+            'status': 'success',
+            'message': 'Cash payment recorded successfully'
+        })
+    
+    
     def get_client_ip(self, request):
         """Get client IP address"""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -311,6 +405,9 @@ def vnpay_return(request):
                 order.paid_total = amount
                 order.save()
                 
+                # Update revenue statistics
+                _update_revenue_stats(order, payment)
+                
                 logger.info(f"Payment successful for order {order_code}")
             else:
                 payment.status = 'failed'
@@ -362,6 +459,9 @@ def vnpay_ipn(request):
             order.paid_total = amount
             order.save()
             
+            # Update revenue statistics
+            _update_revenue_stats(order, payment)
+            
             logger.info(f"IPN payment successful for order {order_code}")
             return Response({'RspCode': '00', 'Message': 'Success'})
         
@@ -389,3 +489,50 @@ def vnpay_config(request):
         'banks': vnpay.get_bank_list(),
         'payment_methods': vnpay.get_payment_methods(),
     }) 
+
+
+
+    # ... existing code ...
+
+@action(detail=False, methods=['get'])
+def test_vnpay_config(self, request):
+    """Test VNPay configuration and create sample payment URL"""
+    try:
+        vnpay = VNPayService()
+        
+        # Test configuration
+        config_status = {
+            'tmn_code': bool(vnpay.vnp_tmn_code),
+            'hash_secret': bool(vnpay.vnp_hash_secret),
+            'payment_url': bool(vnpay.vnp_payment_url),
+            'return_url': bool(vnpay.vnp_return_url),
+        }
+        
+        # Create test payment URL
+        test_order_code = f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        test_amount = 100000  # 100,000 VND
+        test_desc = "Test payment"
+        test_ip = "127.0.0.1"
+        
+        test_payment_url = vnpay.create_payment_url(
+            order_code=test_order_code,
+            amount=test_amount,
+            order_desc=test_desc,
+            ip_addr=test_ip
+        )
+        
+        return Response({
+            'config_status': config_status,
+            'is_sandbox': vnpay.is_sandbox_mode(),
+            'test_payment_url': test_payment_url,
+            'test_order_code': test_order_code,
+            'test_amount': test_amount,
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': str(e),
+            'config_status': config_status if 'config_status' in locals() else {}
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ... existing code ...

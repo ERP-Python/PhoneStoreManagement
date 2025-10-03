@@ -85,16 +85,33 @@ class Payment(models.Model):
         ('pending', 'Pending'),
         ('success', 'Success'),
         ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+        ('expired', 'Expired'),
     ]
     
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default='vnpay')
     amount = models.DecimalField(max_digits=15, decimal_places=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # VNPay specific fields
     txn_code = models.CharField(max_length=100, blank=True, null=True, db_index=True)  # VNPay transaction code
+    vnp_txn_ref = models.CharField(max_length=100, blank=True, null=True, db_index=True)  # VNPay transaction reference
+    vnp_response_code = models.CharField(max_length=10, blank=True, null=True)  # VNPay response code
+    vnp_bank_code = models.CharField(max_length=20, blank=True, null=True)  # Bank code used
+    vnp_card_type = models.CharField(max_length=20, blank=True, null=True)  # Card type (ATM, CREDIT, etc.)
+    vnp_pay_date = models.DateTimeField(blank=True, null=True)  # VNPay payment date
+    
+    # Additional fields for better tracking
     raw_response_json = models.TextField(blank=True, null=True)  # Store VNPay response
+    error_message = models.TextField(blank=True, null=True)  # Error message if payment failed
+    ip_address = models.GenericIPAddressField(blank=True, null=True)  # Client IP address
+    user_agent = models.TextField(blank=True, null=True)  # User agent
+    
+    # Timestamps
     paid_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'payments'
@@ -103,11 +120,31 @@ class Payment(models.Model):
         verbose_name_plural = 'Payments'
         indexes = [
             models.Index(fields=['txn_code']),
+            models.Index(fields=['vnp_txn_ref']),
             models.Index(fields=['order', 'status']),
+            models.Index(fields=['created_at']),
         ]
 
     def __str__(self):
         return f"{self.order.code} - {self.method} - {self.status}"
+    
+    def is_vnpay_payment(self):
+        """Check if this is a VNPay payment"""
+        return self.method == 'vnpay'
+    
+    def is_successful(self):
+        """Check if payment is successful"""
+        return self.status == 'success'
+    
+    def get_vnpay_response_data(self):
+        """Get VNPay response data as dict"""
+        if self.raw_response_json:
+            import json
+            try:
+                return json.loads(self.raw_response_json)
+            except:
+                return {}
+        return {}
 
 
 class StockOut(models.Model):
@@ -144,4 +181,4 @@ class StockOutItem(models.Model):
         verbose_name_plural = 'Stock Out Items'
 
     def __str__(self):
-        return f"{self.stock_out.code} - {self.product_variant}" 
+        return f"{self.stock_out.code} - {self.product_variant}"
