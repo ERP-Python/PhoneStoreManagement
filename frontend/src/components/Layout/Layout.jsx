@@ -16,7 +16,6 @@ import {
   Menu, 
   MenuItem,
   Paper,
-  Breadcrumbs,
   Chip,
   useTheme,
   alpha
@@ -32,9 +31,7 @@ import {
   AccountCircle,
   Notifications,
   Settings,
-  Logout,
-  Home,
-  NavigateNext
+  Logout
 } from '@mui/icons-material'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
@@ -75,23 +72,6 @@ export default function Layout() {
     await logout()
     handleClose()
     navigate('/login')
-  }
-
-
-  // Generate breadcrumbs
-  const generateBreadcrumbs = () => {
-    const pathSegments = location.pathname.split('/').filter(segment => segment !== '')
-    const breadcrumbs = [{ label: 'Home', path: '/' }]
-    
-    pathSegments.forEach((segment, index) => {
-      const path = '/' + pathSegments.slice(0, index + 1).join('/')
-      const menuItem = menuItems.find(item => item.path === path)
-      if (menuItem) {
-        breadcrumbs.push({ label: menuItem.text, path })
-      }
-    })
-    
-    return breadcrumbs
   }
 
   const drawer = (
@@ -234,24 +214,6 @@ export default function Layout() {
               </MenuItem>
             </Menu>
           </Box>
-        </Paper>
-        
-        {/* Breadcrumbs */}
-        <Paper sx={layoutStyles.breadcrumbContainer} elevation={0}>
-          <Breadcrumbs
-            separator={<NavigateNext fontSize="small" />}
-            sx={layoutStyles.breadcrumbs}
-          >
-            {generateBreadcrumbs().map((crumb, index) => (
-              <Typography
-                key={crumb.path}
-                color={index === generateBreadcrumbs().length - 1 ? "primary" : "text.secondary"}
-                sx={layoutStyles.breadcrumbItem}
-              >
-                {crumb.label}
-              </Typography>
-            ))}
-          </Breadcrumbs>
         </Paper>
 
         {/* Page Content */}
