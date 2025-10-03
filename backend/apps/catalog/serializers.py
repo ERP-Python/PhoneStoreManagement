@@ -33,10 +33,17 @@ class ProductVariantSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at', 'product_detail']
     
     def get_product_detail(self, obj):
+        brand_data = None
+        if obj.product.brand:
+            brand_data = {
+                'id': obj.product.brand.id,
+                'name': obj.product.brand.name
+            }
         return {
             'id': obj.product.id,
             'name': obj.product.name,
-            'sku': obj.product.sku
+            'sku': obj.product.sku,
+            'brand': brand_data
         }
 
 

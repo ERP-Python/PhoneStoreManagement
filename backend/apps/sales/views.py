@@ -8,6 +8,8 @@ from django.shortcuts import redirect
 from django.conf import settings
 import json
 import logging
+from datetime import datetime  # Add this import
+
 
 from .models import Order, Payment, StockOut
 from .serializers import (
@@ -16,6 +18,53 @@ from .serializers import (
 from .vnpay import VNPayService
 
 logger = logging.getLogger(__name__)
+
+
+def _update_revenue_stats(order, payment):
+    """Update revenue statistics when payment is successful"""
+    try:
+        # Import here to avoid circular imports
+        from apps.reports.models import RevenueStats
+        from django.db.models import F
+        from datetime import date
+        
+        # Get or create daily revenue stats
+        stats, created = RevenueStats.objects.get_or_create(
+            date=date.today(),
+            defaults={
+                'total_revenue': 0,
+                'total_orders': 0,
+                'cash_revenue': 0,
+                'vnpay_revenue': 0,
+                'bank_transfer_revenue': 0,
+                'cash_orders': 0,
+                'vnpay_orders': 0,
+                'bank_transfer_orders': 0,
+            }
+        )
+        
+        # Update totals
+        stats.total_revenue = F('total_revenue') + payment.amount
+        stats.total_orders = F('total_orders') + 1
+        
+        # Update method-specific stats
+        if payment.method == 'cash':
+            stats.cash_revenue = F('cash_revenue') + payment.amount
+            stats.cash_orders = F('cash_orders') + 1
+        elif payment.method == 'vnpay':
+            stats.vnpay_revenue = F('vnpay_revenue') + payment.amount
+            stats.vnpay_orders = F('vnpay_orders') + 1
+        elif payment.method == 'bank_transfer':
+            stats.bank_transfer_revenue = F('bank_transfer_revenue') + payment.amount
+            stats.bank_transfer_orders = F('bank_transfer_orders') + 1
+        
+        stats.save()
+        
+        logger.info(f"Updated revenue stats for {payment.method} payment: {payment.amount}")
+        
+    except Exception as e:
+        logger.error(f"Failed to update revenue stats: {str(e)}")
+        # Don't fail the payment if revenue stats update fails
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -59,9 +108,20 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def create_vnpay_payment(self, request, pk=None):
         """Create VNPay payment URL for order"""
+        logger.info("=" * 80)
+        logger.info("API CALL: CREATE VNPAY PAYMENT")
+        logger.info("-" * 80)
+        
         order = self.get_object()
         
+        logger.info(f"Order ID: {order.id}")
+        logger.info(f"Order Code: {order.code}")
+        logger.info(f"Order Total: {order.total} VND")
+        logger.info(f"Order Status: {order.status}")
+        logger.info(f"Customer IP: {self.get_client_ip(request)}")
+        
         if order.status == 'paid':
+            logger.warning(f"Order {order.code} is already paid. Rejecting payment request.")
             return Response(
                 {'error': 'Order is already paid'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -69,6 +129,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         # Get bank code from request (optional)
         bank_code = request.data.get('bank_code', None)
+        logger.info(f"Bank Code: {bank_code if bank_code else 'Not specified'}")
         
         # Create payment record
         payment = Payment.objects.create(
@@ -77,11 +138,14 @@ class OrderViewSet(viewsets.ModelViewSet):
             amount=order.total,
             status='pending'
         )
+        logger.info(f"Payment record created: ID={payment.id}, Status=pending")
         
         # Generate VNPay payment URL
+        logger.info("Initializing VNPayService...")
         vnpay = VNPayService()
         
         try:
+            logger.info("Calling create_payment_url...")
             payment_url = vnpay.create_payment_url(
                 order_code=order.code,
                 amount=float(order.total),
@@ -89,6 +153,10 @@ class OrderViewSet(viewsets.ModelViewSet):
                 ip_addr=self.get_client_ip(request),
                 bank_code=bank_code
             )
+            
+            logger.info(f"Payment URL created successfully")
+            logger.info(f"Sandbox mode: {vnpay.is_sandbox_mode()}")
+            logger.info("=" * 80)
             
             return Response({
                 'payment_id': payment.id,
@@ -100,7 +168,12 @@ class OrderViewSet(viewsets.ModelViewSet):
             })
             
         except Exception as e:
-            logger.error(f"Error creating VNPay payment: {str(e)}")
+            logger.error("=" * 80)
+            logger.error(f"ERROR creating VNPay payment: {str(e)}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error("=" * 80)
             return Response(
                 {'error': 'Failed to create payment URL'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -129,7 +202,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def fulfill(self, request, pk=None):
-        """Create Stock Out and fulfill order"""
+        """Create Stock Out record for order (inventory already reduced at order creation)"""
         order = self.get_object()
         
         if order.status != 'paid':
@@ -145,38 +218,36 @@ class OrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Prepare Stock Out data
-        stock_out_data = {
-            'order': order.id,
-            'note': f'Fulfillment for order {order.code}',
-            'items': []
-        }
+        # Inventory already reduced when order was created
+        # Just create StockOut record for tracking without reducing inventory again
+        from django.utils import timezone
+        from .models import StockOutItem
         
-        # Copy items from order
-        for order_item in order.items.all():
-            stock_out_data['items'].append({
-                'product_variant': order_item.product_variant.id,
-                'qty': order_item.qty
-            })
-        
-        # Create Stock Out (this will also reduce inventory)
-        stock_out_serializer = StockOutSerializer(
-            data=stock_out_data,
-            context={'request': request}
+        stock_out = StockOut.objects.create(
+            code=f"OUT-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+            order=order,
+            note=f'Fulfillment for order {order.code}',
+            created_by=request.user
         )
         
-        if stock_out_serializer.is_valid():
-            stock_out = stock_out_serializer.save(created_by=request.user)
-            return Response({
-                'message': 'Order fulfilled successfully',
-                'stock_out': stock_out_serializer.data
-            }, status=status.HTTP_201_CREATED)
+        # Create stock out items (without reducing inventory)
+        for order_item in order.items.all():
+            StockOutItem.objects.create(
+                stock_out=stock_out,
+                product_variant=order_item.product_variant,
+                qty=order_item.qty
+            )
         
-        return Response(stock_out_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = StockOutSerializer(stock_out)
+        return Response({
+            'message': 'Order fulfilled successfully',
+            'stock_out': serializer.data
+        }, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def cancel(self, request, pk=None):
-        """Cancel an order"""
+        """Cancel an order and restore inventory"""
         order = self.get_object()
         
         if order.status == 'paid':
@@ -190,6 +261,38 @@ class OrderViewSet(viewsets.ModelViewSet):
                 {'error': 'Order is already cancelled'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Restore inventory for cancelled order
+        from apps.inventory.models import Inventory, StockMovement
+        
+        for order_item in order.items.all():
+            # Check if inventory was reduced for this order
+            stock_movements = StockMovement.objects.filter(
+                ref_type='Order',
+                ref_id=order.id,
+                product_variant=order_item.product_variant,
+                type='OUT'
+            )
+            
+            if stock_movements.exists():
+                # Restore inventory
+                try:
+                    inventory = Inventory.objects.select_for_update().get(
+                        product_variant=order_item.product_variant
+                    )
+                    inventory.on_hand += order_item.qty
+                    inventory.save()
+                    
+                    # Create stock movement record for restoration
+                    StockMovement.objects.create(
+                        type='IN',
+                        product_variant=order_item.product_variant,
+                        qty=order_item.qty,
+                        ref_type='OrderCancellation',
+                        ref_id=order.id
+                    )
+                except Inventory.DoesNotExist:
+                    logger.error(f'Inventory not found for variant {order_item.product_variant.sku}')
         
         order.status = 'cancelled'
         order.save()
@@ -208,6 +311,51 @@ class OrderViewSet(viewsets.ModelViewSet):
             'count': payments.count(),
             'payments': serializer.data
         })
+    
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def create_cash_payment(self, request, pk=None):
+        """Create cash payment for order"""
+        order = self.get_object()
+        
+        if order.status == 'paid':
+            return Response(
+                {'error': 'Order is already paid'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        amount = request.data.get('amount', order.total)
+        note = request.data.get('note', '')
+        
+        # Create payment record
+        payment = Payment.objects.create(
+            order=order,
+            method='cash',
+            amount=amount,
+            status='success',
+            paid_at=timezone.now(),
+            ip_address=self.get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+        )
+        
+        # Update order status
+        order.status = 'paid'
+        order.paid_total = amount
+        order.save()
+        
+        # Update revenue statistics
+        _update_revenue_stats(order, payment)
+        
+        logger.info(f"Cash payment created for order {order.code}")
+        
+        return Response({
+            'payment_id': payment.id,
+            'order_code': order.code,
+            'amount': float(amount),
+            'status': 'success',
+            'message': 'Cash payment recorded successfully'
+        })
+    
     
     def get_client_ip(self, request):
         """Get client IP address"""
@@ -284,18 +432,30 @@ def vnpay_return(request):
     Handle VNPay return callback
     This is called when user completes payment on VNPay
     """
+    logger.info("=" * 80)
+    logger.info("VNPAY RETURN CALLBACK RECEIVED")
+    logger.info("-" * 80)
+    
     vnpay = VNPayService()
     response_data = request.GET.dict()
     
-    logger.info(f"VNPay return callback received: {response_data}")
+    logger.info("CALLBACK PARAMETERS:")
+    for key, value in response_data.items():
+        logger.info(f"  {key}: {value}")
+    logger.info("-" * 80)
     
     # Validate VNPay response
+    logger.info("Validating VNPay response...")
     is_success, txn_code, amount, order_code, raw_response = vnpay.validate_response(response_data)
     
     try:
         # Find order and payment
+        logger.info(f"Looking for order: {order_code}")
         order = Order.objects.get(code=order_code)
+        logger.info(f"Order found: ID={order.id}, Status={order.status}")
+        
         payment = order.payments.filter(status='pending').order_by('-created_at').first()
+        logger.info(f"Pending payment found: {payment.id if payment else 'None'}")
         
         if payment:
             # Update payment record
@@ -303,6 +463,7 @@ def vnpay_return(request):
             payment.raw_response_json = json.dumps(raw_response)
             
             if is_success:
+                logger.info("Payment validation SUCCESS - Updating records...")
                 payment.status = 'success'
                 payment.paid_at = timezone.now()
                 
@@ -310,25 +471,43 @@ def vnpay_return(request):
                 order.status = 'paid'
                 order.paid_total = amount
                 order.save()
+                logger.info(f"Order {order_code} marked as PAID")
+                
+                # Update revenue statistics
+                _update_revenue_stats(order, payment)
+                logger.info("Revenue statistics updated")
                 
                 logger.info(f"Payment successful for order {order_code}")
             else:
+                logger.warning("Payment validation FAILED - Marking as failed...")
                 payment.status = 'failed'
                 logger.warning(f"Payment failed for order {order_code}")
             
             payment.save()
+            logger.info(f"Payment record updated: Status={payment.status}")
+        else:
+            logger.warning(f"No pending payment found for order {order_code}")
         
         # Redirect to frontend with payment status
+                # Redirect to frontend with payment status
         frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:3000'
-        redirect_url = f"{frontend_url}/orders/{order.id}?payment_status={'success' if is_success else 'failed'}"
+        redirect_url = f"{frontend_url}/orders?payment_status={'success' if is_success else 'failed'}"
         
+        logger.info(f"Redirecting to: {redirect_url}")
+        logger.info("=" * 80)
         return redirect(redirect_url)
         
     except Order.DoesNotExist:
-        logger.error(f"Order not found: {order_code}")
+        logger.error("=" * 80)
+        logger.error(f"ERROR: Order not found: {order_code}")
+        logger.error("=" * 80)
         return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger.error(f"Error processing VNPay return: {str(e)}")
+        logger.error("=" * 80)
+        logger.error(f"ERROR processing VNPay return: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error("=" * 80)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -362,6 +541,9 @@ def vnpay_ipn(request):
             order.paid_total = amount
             order.save()
             
+            # Update revenue statistics
+            _update_revenue_stats(order, payment)
+            
             logger.info(f"IPN payment successful for order {order_code}")
             return Response({'RspCode': '00', 'Message': 'Success'})
         
@@ -389,3 +571,50 @@ def vnpay_config(request):
         'banks': vnpay.get_bank_list(),
         'payment_methods': vnpay.get_payment_methods(),
     }) 
+
+
+
+    # ... existing code ...
+
+@action(detail=False, methods=['get'])
+def test_vnpay_config(self, request):
+    """Test VNPay configuration and create sample payment URL"""
+    try:
+        vnpay = VNPayService()
+        
+        # Test configuration
+        config_status = {
+            'tmn_code': bool(vnpay.vnp_tmn_code),
+            'hash_secret': bool(vnpay.vnp_hash_secret),
+            'payment_url': bool(vnpay.vnp_payment_url),
+            'return_url': bool(vnpay.vnp_return_url),
+        }
+        
+        # Create test payment URL
+        test_order_code = f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        test_amount = 100000  # 100,000 VND
+        test_desc = "Test payment"
+        test_ip = "127.0.0.1"
+        
+        test_payment_url = vnpay.create_payment_url(
+            order_code=test_order_code,
+            amount=test_amount,
+            order_desc=test_desc,
+            ip_addr=test_ip
+        )
+        
+        return Response({
+            'config_status': config_status,
+            'is_sandbox': vnpay.is_sandbox_mode(),
+            'test_payment_url': test_payment_url,
+            'test_order_code': test_order_code,
+            'test_amount': test_amount,
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': str(e),
+            'config_status': config_status if 'config_status' in locals() else {}
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ... existing code ...

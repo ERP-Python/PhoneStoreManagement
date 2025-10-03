@@ -39,13 +39,27 @@ export default function PaymentDialog({ open, onClose, order, onSuccess }) {
     try {
       if (paymentMethod === 'vnpay') {
         // Create VNPay payment
+        console.log('Creating VNPay payment for order:', order.id)
         const response = await api.post(`/orders/${order.id}/create_vnpay_payment/`)
+        
+        console.log('=== VNPAY DEBUG ===')
+        console.log('Full Response:', response.data)
+        console.log('Payment URL:', response.data.payment_url)
+        console.log('Payment URL Length:', response.data.payment_url?.length)
+        console.log('Is Sandbox:', response.data.is_sandbox)
+        console.log('==================')
         
         // Redirect to VNPay
         if (response.data.payment_url) {
-          window.open(response.data.payment_url, '_blank')
+          // Use window.location.href instead of window.open (more reliable)
+          console.log('Redirecting to VNPay...')
+          window.location.href = response.data.payment_url
+          
           onSuccess('Đang chuyển đến VNPay...')
           onClose()
+        } else {
+          console.error('No payment_url in response:', response.data)
+          setError('Không nhận được URL thanh toán từ server')
         }
       } else if (paymentMethod === 'cash') {
         // Mark as paid (cash payment)
@@ -55,6 +69,7 @@ export default function PaymentDialog({ open, onClose, order, onSuccess }) {
       }
     } catch (err) {
       console.error('Error processing payment:', err)
+      console.error('Error details:', err.response?.data)
       setError(err.response?.data?.error || err.response?.data?.detail || 'Có lỗi xảy ra khi xử lý thanh toán')
     } finally {
       setLoading(false)
