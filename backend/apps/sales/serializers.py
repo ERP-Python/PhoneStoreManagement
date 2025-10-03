@@ -2,6 +2,9 @@ from rest_framework import serializers
 from django.db import transaction
 from .models import Order, OrderItem, Payment, StockOut, StockOutItem
 from apps.customers.serializers import CustomerSerializer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -60,12 +63,48 @@ class OrderSerializer(serializers.ModelSerializer):
             validated_data['code'] = f"ORD-{timezone.now().strftime('%Y%m%d%H%M%S')}"
         
         order = Order.objects.create(**validated_data)
+        logger.info(f"Created order {order.code} with id {order.id}")
         
-        # Create order items with snapshot price
+        # Import Inventory and StockMovement models
+        from apps.inventory.models import Inventory, StockMovement
+        
+        # Create order items with snapshot price and reduce inventory
         for item_data in items_data:
             variant = item_data['product_variant']
+            qty = item_data['qty']
             item_data['unit_price'] = variant.price  # Snapshot current price
             OrderItem.objects.create(order=order, **item_data)
+            
+            logger.info(f"Processing variant {variant.id} (SKU: {variant.sku}), qty: {qty}")
+            
+            # Reduce inventory immediately when order is created
+            try:
+                inventory = Inventory.objects.select_for_update().get(product_variant=variant)
+                old_qty = inventory.on_hand
+                inventory.on_hand -= qty
+                inventory.save()
+                
+                logger.info(f"Reduced inventory for variant {variant.sku}: {old_qty} -> {inventory.on_hand}")
+                
+                # Create stock movement record
+                movement = StockMovement.objects.create(
+                    type='OUT',
+                    product_variant=variant,
+                    qty=qty,
+                    ref_type='Order',
+                    ref_id=order.id
+                )
+                logger.info(f"Created StockMovement id={movement.id} for order {order.code}")
+                
+            except Inventory.DoesNotExist:
+                logger.error(f'Inventory not found for variant {variant.sku} (id={variant.id})')
+                # This should not happen if validation is correct
+                raise serializers.ValidationError({
+                    'items': f'Inventory not found for variant {variant.sku}'
+                })
+            except Exception as e:
+                logger.error(f'Error reducing inventory: {str(e)}')
+                raise
         
         # Calculate totals
         order.calculate_totals()
@@ -157,4 +196,4 @@ class StockOutSerializer(serializers.ModelSerializer):
                 ref_id=stock_out.id
             )
         
-        return stock_out 
+        return stock_out
