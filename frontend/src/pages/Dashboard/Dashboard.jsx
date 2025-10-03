@@ -60,12 +60,14 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType })
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [salesData, setSalesData] = useState([])
+  const [topProducts, setTopProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     fetchStats()
     fetchSalesChart()
+    fetchTopProducts()
   }, [])
 
   const fetchStats = async () => {
@@ -89,6 +91,18 @@ export default function Dashboard() {
       console.error('Error fetching sales chart:', error)
       // Set empty data on error instead of random data
       setSalesData([])
+    }
+  }
+
+  const fetchTopProducts = async () => {
+    try {
+      const response = await api.get('/reports/top-products/', { 
+        params: { limit: 4, period: 'month' } 
+      })
+      setTopProducts(response.data.top_by_quantity || [])
+    } catch (error) {
+      console.error('Error fetching top products:', error)
+      setTopProducts([])
     }
   }
 
@@ -381,28 +395,37 @@ export default function Dashboard() {
                 Sản phẩm bán chạy
               </Typography>
               <Box sx={{ mt: 2 }}>
-                {[
-                  { name: 'iPhone 15 Pro Max', sales: 156, progress: 85 },
-                  { name: 'Samsung Galaxy S24', sales: 134, progress: 72 },
-                  { name: 'Xiaomi 14 Ultra', sales: 98, progress: 53 },
-                  { name: 'OPPO Find X7', sales: 67, progress: 36 },
-                ].map((product, index) => (
-                  <Box key={index} sx={dashboardStyles.productItem}>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" fontWeight={500}>
-                        {product.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {product.sales} đã bán
-                      </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={product.progress} 
-                        sx={{ mt: 1, height: 6, borderRadius: 3 }}
-                      />
-                    </Box>
+                {topProducts.length > 0 ? (
+                  topProducts.map((product, index) => {
+                    // Calculate progress based on max quantity
+                    const maxQty = topProducts[0]?.total_qty || 1
+                    const progress = (product.total_qty / maxQty) * 100
+                    
+                    return (
+                      <Box key={product.product_id} sx={dashboardStyles.productItem}>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {product.product_name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {product.total_qty} đã bán • {formatCurrency(product.total_revenue)}
+                          </Typography>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={progress} 
+                            sx={{ mt: 1, height: 6, borderRadius: 3 }}
+                          />
+                        </Box>
+                      </Box>
+                    )
+                  })
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Chưa có dữ liệu sản phẩm bán chạy
+                    </Typography>
                   </Box>
-                ))}
+                )}
               </Box>
             </CardContent>
           </Card>
