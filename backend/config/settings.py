@@ -171,11 +171,14 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# VNPay Configuration
-VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', '')
-VNPAY_HASH_SECRET = os.getenv('VNPAY_HASH_SECRET', '')
-VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', 'http://localhost:8000/api/payments/vnpay/return')
+# VNPay Configuration - Sandbox
+VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', '2QXUI4J4')
+VNPAY_HASH_SECRET_KEY = os.getenv('VNPAY_HASH_SECRET_KEY', 'SANDBOXHASHSECRET')
+VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', 'http://localhost:8000/api/payments/vnpay/return/')
 VNPAY_PAYMENT_URL = os.getenv('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
+
+# Legacy support for old variable name
+VNPAY_HASH_SECRET = VNPAY_HASH_SECRET_KEY
 
 # Custom Settings
 ENABLE_IMEI_TRACKING = os.getenv('ENABLE_IMEI_TRACKING', 'False') == 'True'

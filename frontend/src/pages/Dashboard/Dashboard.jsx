@@ -50,21 +50,13 @@ export default function Dashboard() {
 
   const fetchSalesChart = async () => {
     try {
-      // Fetch sales data for last 7 days
-      const response = await api.get('/reports/sales/', { params: { range: 'week' } })
-      // Transform data for chart (this is sample - backend might need adjustment)
-      const chartData = [
-        { name: 'T2', doanhthu: Math.random() * 10000000 },
-        { name: 'T3', doanhthu: Math.random() * 10000000 },
-        { name: 'T4', doanhthu: Math.random() * 10000000 },
-        { name: 'T5', doanhthu: Math.random() * 10000000 },
-        { name: 'T6', doanhthu: Math.random() * 10000000 },
-        { name: 'T7', doanhthu: Math.random() * 10000000 },
-        { name: 'CN', doanhthu: Math.random() * 10000000 }
-      ]
-      setSalesData(chartData)
+      // Fetch real sales data for last 7 days from new endpoint
+      const response = await api.get('/reports/daily-revenue/', { params: { days: 7 } })
+      setSalesData(response.data.data || [])
     } catch (error) {
       console.error('Error fetching sales chart:', error)
+      // Set empty data on error instead of random data
+      setSalesData([])
     }
   }
 

@@ -1,11 +1,13 @@
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q, F
+from django.db.models import Q, F, Sum, Count
+from django.db.models.functions import Coalesce
 
 from .models import Inventory, StockMovement
 from .serializers import InventorySerializer, StockMovementSerializer
+from apps.catalog.models import Product
 
 
 class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -52,6 +54,134 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(on_hand__gt=0)
         
         return queryset
+    
+    @action(detail=False, methods=['get'])
+    def by_product(self, request):
+        """
+        Get inventory grouped by product (not variant)
+        Each row shows total inventory across all variants of a product
+        """
+        from apps.sales.models import OrderItem
+        
+        # Get search term
+        search = request.query_params.get('search', '')
+        
+        # Get all products with active variants
+        products_query = Product.objects.filter(
+            is_active=True,
+            variants__is_active=True,
+            variants__inventory__isnull=False
+        ).select_related('brand').distinct()
+        
+        # Apply search filter
+        if search:
+            products_query = products_query.filter(
+                Q(name__icontains=search) |
+                Q(sku__icontains=search) |
+                Q(brand__name__icontains=search)
+            )
+        
+        # Paginate
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 10))
+        
+        total_count = products_query.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        products = products_query[start:end]
+        
+        # Build response data
+        result_data = []
+        low_stock_threshold = 10
+        
+        for product in products:
+            # Get all variants with inventory
+            variants = product.variants.filter(
+                is_active=True,
+                inventory__isnull=False
+            ).select_related('inventory')
+            
+            # Calculate totals
+            total_on_hand = 0
+            total_reserved = 0
+            variants_data = []
+            
+            for variant in variants:
+                inventory = variant.inventory
+                
+                # Calculate reserved quantity
+                reserved = OrderItem.objects.filter(
+                    product_variant=variant,
+                    order__status='pending'
+                ).aggregate(total=Sum('qty'))['total'] or 0
+                
+                total_on_hand += inventory.on_hand
+                total_reserved += reserved
+                
+                # Build variant detail
+                variant_parts = []
+                if variant.ram:
+                    variant_parts.append(variant.ram)
+                if variant.rom:
+                    variant_parts.append(variant.rom)
+                if variant.color:
+                    variant_parts.append(variant.color)
+                
+                variants_data.append({
+                    'id': variant.id,
+                    'sku': variant.sku,
+                    'display': ' / '.join(variant_parts) if variant_parts else '-',
+                    'ram': variant.ram or '',
+                    'rom': variant.rom or '',
+                    'color': variant.color or '',
+                    'price': float(variant.price),
+                    'on_hand': inventory.on_hand,
+                    'reserved': reserved,
+                    'available': max(0, inventory.on_hand - reserved)
+                })
+            
+            total_available = max(0, total_on_hand - total_reserved)
+            
+            # Determine status
+            if total_on_hand == 0:
+                status_data = {
+                    'value': 'out_of_stock',
+                    'label': 'Hết hàng',
+                    'color': 'error'
+                }
+            elif total_on_hand <= low_stock_threshold:
+                status_data = {
+                    'value': 'low_stock',
+                    'label': 'Sắp hết',
+                    'color': 'warning'
+                }
+            else:
+                status_data = {
+                    'value': 'in_stock',
+                    'label': 'Còn hàng',
+                    'color': 'success'
+                }
+            
+            result_data.append({
+                'id': product.id,
+                'name': product.name,
+                'sku': product.sku,
+                'brand_name': product.brand.name if product.brand else '',
+                'total_on_hand': total_on_hand,
+                'total_reserved': total_reserved,
+                'total_available': total_available,
+                'variants_count': variants.count(),
+                'variants': variants_data,
+                'status': status_data
+            })
+        
+        return Response({
+            'count': total_count,
+            'page': page,
+            'page_size': page_size,
+            'results': result_data
+        })
     
     @action(detail=False, methods=['get'])
     def low_stock_alert(self, request):
@@ -161,4 +291,4 @@ class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
             'total_in': total_in,
             'total_out': total_out,
             'net_change': total_in - total_out
-        }) 
+        })

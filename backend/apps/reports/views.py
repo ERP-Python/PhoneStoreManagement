@@ -227,9 +227,13 @@ def top_products(request):
 def dashboard_stats(request):
     """
     Dashboard overview statistics
+    Query params: low_stock_threshold (default 10)
     """
     today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     this_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Get low stock threshold from query params or use default
+    low_stock_threshold = int(request.query_params.get('low_stock_threshold', 10))
     
     # Today's stats
     today_orders = Order.objects.filter(created_at__gte=today)
@@ -241,8 +245,42 @@ def dashboard_stats(request):
     
     # Inventory stats
     total_products = Product.objects.filter(is_active=True).count()
-    low_stock_items = Inventory.objects.filter(on_hand__lte=10, on_hand__gt=0).count()
-    out_of_stock_items = Inventory.objects.filter(on_hand=0).count()
+    total_variants = ProductVariant.objects.filter(is_active=True).count()
+    
+    # Get low stock items with details
+    low_stock_items = Inventory.objects.filter(
+        on_hand__lte=low_stock_threshold, 
+        on_hand__gt=0
+    ).select_related('product_variant__product__brand')
+    
+    out_of_stock_items = Inventory.objects.filter(on_hand=0).select_related(
+        'product_variant__product__brand'
+    )
+    
+    # Prepare low stock alert details
+    low_stock_details = [
+        {
+            'id': item.id,
+            'product_name': item.product_variant.product.name,
+            'variant_sku': item.product_variant.sku,
+            'brand': item.product_variant.product.brand.name,
+            'on_hand': item.on_hand,
+            'status': 'low_stock'
+        }
+        for item in low_stock_items[:10]  # Limit to top 10 for dashboard
+    ]
+    
+    out_of_stock_details = [
+        {
+            'id': item.id,
+            'product_name': item.product_variant.product.name,
+            'variant_sku': item.product_variant.sku,
+            'brand': item.product_variant.product.brand.name,
+            'on_hand': 0,
+            'status': 'out_of_stock'
+        }
+        for item in out_of_stock_items[:10]  # Limit to top 10 for dashboard
+    ]
     
     # Customer stats
     total_customers = Customer.objects.filter(is_active=True).count()
@@ -261,8 +299,12 @@ def dashboard_stats(request):
         },
         'inventory': {
             'total_products': total_products,
-            'low_stock_count': low_stock_items,
-            'out_of_stock_count': out_of_stock_items
+            'total_variants': total_variants,
+            'low_stock_count': low_stock_items.count(),
+            'out_of_stock_count': out_of_stock_items.count(),
+            'low_stock_threshold': low_stock_threshold,
+            'low_stock_items': low_stock_details,
+            'out_of_stock_items': out_of_stock_details
         },
         'customers': {
             'total_count': total_customers
@@ -318,4 +360,65 @@ def stock_movements_report(request):
             }
             for m in movements.order_by('-created_at')[:100]
         ]
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def daily_revenue_chart(request):
+    """
+    Daily revenue chart data for last N days
+    Query params: days (default 7)
+    """
+    from apps.reports.models import RevenueStats
+    from datetime import date
+    
+    days = int(request.query_params.get('days', 7))
+    today = date.today()
+    
+    # Get revenue stats for the last N days
+    chart_data = []
+    
+    for i in range(days - 1, -1, -1):
+        target_date = today - timedelta(days=i)
+        
+        # Try to get stats from RevenueStats first
+        try:
+            stats = RevenueStats.objects.get(date=target_date)
+            revenue = float(stats.total_revenue)
+            orders = stats.total_orders
+        except RevenueStats.DoesNotExist:
+            # Fallback: calculate from Order model
+            day_start = timezone.datetime.combine(target_date, timezone.datetime.min.time())
+            day_end = timezone.datetime.combine(target_date, timezone.datetime.max.time())
+            if timezone.is_aware(day_start):
+                day_start = timezone.make_aware(day_start)
+                day_end = timezone.make_aware(day_end)
+            
+            day_orders = Order.objects.filter(
+                created_at__gte=day_start,
+                created_at__lte=day_end,
+                status='paid'
+            )
+            revenue = float(day_orders.aggregate(total=Sum('total'))['total'] or 0)
+            orders = day_orders.count()
+        
+        # Format day name in Vietnamese
+        day_names = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
+        weekday = target_date.weekday()
+        day_name = day_names[weekday]
+        
+        chart_data.append({
+            'date': str(target_date),
+            'name': day_name,
+            'doanhthu': revenue,
+            'orders': orders,
+            'formatted_date': target_date.strftime('%d/%m')
+        })
+    
+    return Response({
+        'days': days,
+        'data': chart_data,
+        'total_revenue': sum(item['doanhthu'] for item in chart_data),
+        'total_orders': sum(item['orders'] for item in chart_data)
     }) 
