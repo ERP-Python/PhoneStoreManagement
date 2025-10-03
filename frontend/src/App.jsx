@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { AlertProvider } from './context/AlertContext'
 import Layout from './components/Layout/Layout'
 import Login from './pages/Login/Login'
 import Dashboard from './pages/Dashboard/Dashboard'
@@ -22,22 +23,24 @@ function PrivateRoute({ children }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      
-      <Route path="/" element={
-        <PrivateRoute>
-          <Layout />
-        </PrivateRoute>
-      }>
-        <Route index element={<Dashboard />} />
-        <Route path="products" element={<Products />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="customers" element={<Customers />} />
-        <Route path="inventory" element={<Inventory />} />
-        <Route path="reports" element={<Reports />} />
-      </Route>
-    </Routes>
+    <AlertProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        
+        <Route path="/" element={
+          <PrivateRoute>
+            <Layout />
+          </PrivateRoute>
+        }>
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={<Products />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="customers" element={<Customers />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="reports" element={<Reports />} />
+        </Route>
+      </Routes>
+    </AlertProvider>
   )
 }
 
