@@ -59,45 +59,35 @@ export default function OrderForm({ open, onClose, onSuccess }) {
 
   const fetchProductVariants = async () => {
     try {
-      const response = await api.get('/products/variants/')
-      setProductVariants(response.data.results || response.data)
+      // Add timestamp to ensure fresh data from database
+      const timestamp = new Date().getTime()
+      const response = await api.get(`/products/variants/?_t=${timestamp}`)
+      const variants = response.data.results || response.data
+      console.log(`Fetched ${variants.length} variants with current stock from database`)
+      setProductVariants(variants)
     } catch (err) {
       console.error('Error fetching variants:', err)
     }
   }
+//toi ten la hung 
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleItemChange = async (index, field, value) => {
+  const handleItemChange = (index, field, value) => {
     const newItems = [...items]
     newItems[index][field] = value
 
-    // If product variant changed, fetch stock info and set price
+    // If product variant changed, set price and stock from variant data
     if (field === 'product_variant' && value) {
       const variant = productVariants.find(v => v.id === value)
       if (variant) {
         newItems[index].unit_price = variant.price
-        
-        // Fetch current stock from database
-        try {
-          const response = await api.get(`/inventory/?product_variant=${value}`)
-          const inventoryData = response.data.results || response.data
-          if (inventoryData.length > 0) {
-            // Get actual on_hand quantity from database
-            const onHand = inventoryData[0].on_hand || 0
-            newItems[index].available_stock = Math.max(0, onHand)
-            console.log(`Stock for variant ${value}:`, onHand)
-          } else {
-            newItems[index].available_stock = 0
-            console.log(`No inventory found for variant ${value}`)
-          }
-        } catch (err) {
-          console.error('Error fetching stock:', err)
-          newItems[index].available_stock = 0
-        }
+        // Use current_stock from variant (fetched from database)
+        newItems[index].available_stock = variant.current_stock || 0
+        console.log(`Stock for variant ${value} (${variant.product_detail?.name}):`, variant.current_stock)
       }
     }
 
