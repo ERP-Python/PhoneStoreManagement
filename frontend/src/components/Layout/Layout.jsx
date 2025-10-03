@@ -1,33 +1,33 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
-import { 
-  Box, 
-  Drawer, 
-  AppBar, 
-  Toolbar, 
-  List, 
-  Typography, 
-  Divider, 
-  IconButton, 
-  ListItem, 
-  ListItemButton, 
-  ListItemIcon, 
-  ListItemText, 
-  Avatar, 
-  Menu, 
+import {
+  Box,
+  Drawer,
+  AppBar,
+  Toolbar,
+  List,
+  Typography,
+  Divider,
+  IconButton,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
+  Menu,
   MenuItem,
   Paper,
   Chip,
   useTheme,
   alpha
 } from '@mui/material'
-import { 
-  Dashboard, 
-  Inventory, 
-  ShoppingCart, 
-  People, 
-  Store, 
-  Assessment, 
-  Menu as MenuIcon, 
+import {
+  Dashboard,
+  Inventory,
+  ShoppingCart,
+  People,
+  Store,
+  Assessment,
+  Menu as MenuIcon,
   AccountCircle,
   Notifications,
   Settings,
@@ -78,21 +78,26 @@ export default function Layout() {
     <Box sx={layoutStyles.sidebarContainer}>
       {/* Sidebar Header */}
       <Box sx={layoutStyles.sidebarHeader}>
-        <Typography variant="h6" sx={layoutStyles.sidebarTitle}>
+        {/* <Typography variant="h6" sx={layoutStyles.sidebarTitle}>
           Menu
-        </Typography>
+        </Typography> */}
+        <img
+          src={logoImage}
+          alt="Phone Store Logo"
+          style={{ width: '70%', height: '50%%', objectFit: 'contain' }}
+        />
       </Box>
-      
+
       <Divider sx={{ borderColor: '#e2e8f0' }} />
-      
+
       {/* Navigation Menu */}
       <List sx={layoutStyles.navList}>
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path
           return (
             <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-              <ListItemButton 
-                component={Link} 
+              <ListItemButton
+                component={Link}
                 to={item.path}
                 sx={{
                   ...layoutStyles.navItem,
@@ -105,8 +110,8 @@ export default function Layout() {
                 }}>
                   {iconMap[item.icon]}
                 </ListItemIcon>
-                <ListItemText 
-                  primary={item.text} 
+                <ListItemText
+                  primary={item.text}
                   sx={{
                     ...layoutStyles.navText,
                     ...(isActive ? layoutStyles.navTextActive : {}),
@@ -117,7 +122,7 @@ export default function Layout() {
           )
         })}
       </List>
-      
+
     </Box>
   )
 
@@ -156,7 +161,7 @@ export default function Layout() {
           <Box sx={layoutStyles.headerContent}>
             {/* Logo in navbar - leftmost position */}
             <Box sx={layoutStyles.navbarLogoContainer}>
-              <Box 
+              {/* <Box
                 component="img"
                 src={logoImage}
                 alt="Phone Store Logo"
@@ -164,9 +169,9 @@ export default function Layout() {
               />
               <Typography variant="h6" sx={layoutStyles.navbarLogoText}>
                 Phone Store
-              </Typography>
+              </Typography> */}
             </Box>
-            
+
             {/* Mobile menu button */}
             <IconButton
               color="inherit"
@@ -176,7 +181,7 @@ export default function Layout() {
             >
               <MenuIcon />
             </IconButton>
-            
+
             {/* Right side actions */}
             <Box sx={layoutStyles.headerActions}>
               <IconButton sx={layoutStyles.headerActionButton}>
@@ -185,7 +190,7 @@ export default function Layout() {
               <IconButton sx={layoutStyles.headerActionButton}>
                 <Settings />
               </IconButton>
-              <IconButton 
+              <IconButton
                 onClick={handleMenu}
                 sx={{ p: 0.5 }}
               >
@@ -194,7 +199,7 @@ export default function Layout() {
                 </Avatar>
               </IconButton>
             </Box>
-            
+
             {/* User menu dropdown */}
             <Menu
               anchorEl={anchorEl}
