@@ -18,9 +18,12 @@ import {
   Typography,
   IconButton,
   Divider,
-  Paper
+  Paper,
+  Card,
+  CardMedia,
+  CardActions
 } from '@mui/material'
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import { Add as AddIcon, Delete as DeleteIcon, CloudUpload, Star, StarBorder } from '@mui/icons-material'
 import api from '../../api/axios'
 import { productFormStyles } from './ProductForm.styles'
 
@@ -39,6 +42,8 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
   const [brands, setBrands] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
 
   useEffect(() => {
     if (open) {
@@ -68,6 +73,18 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
         } else {
           setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', is_active: true }])
         }
+        
+        // Load images if available
+        if (product.images && product.images.length > 0) {
+          setImagePreviews(product.images.map(img => ({
+            id: img.id,
+            url: img.image,
+            isPrimary: img.is_primary,
+            existing: true
+          })))
+        } else {
+          setImagePreviews([])
+        }
       } else {
         // Add mode - reset form
         setFormData({
@@ -79,7 +96,9 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           is_active: true
         })
         setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', is_active: true }])
+        setImagePreviews([])
       }
+      setImages([])
       setError(null)
     }
   }, [open, product])
@@ -130,6 +149,57 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
     }
   }
 
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+
+    const newImages = []
+    const newPreviews = []
+
+    files.forEach((file) => {
+      if (file.type.startsWith('image/')) {
+        newImages.push(file)
+        
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          newPreviews.push({
+            url: reader.result,
+            isPrimary: imagePreviews.length === 0 && newPreviews.length === 0,
+            file: file,
+            existing: false
+          })
+          
+          if (newPreviews.length === files.length) {
+            setImages(prev => [...prev, ...newImages])
+            setImagePreviews(prev => [...prev, ...newPreviews])
+          }
+        }
+        reader.readAsDataURL(file)
+      }
+    })
+  }
+
+  const handleRemoveImage = (index) => {
+    const imageToRemove = imagePreviews[index]
+    
+    if (!imageToRemove.existing) {
+      // Remove new image from files
+      const imageFileIndex = images.findIndex(img => img === imageToRemove.file)
+      if (imageFileIndex !== -1) {
+        setImages(prev => prev.filter((_, i) => i !== imageFileIndex))
+      }
+    }
+    
+    setImagePreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSetPrimaryImage = (index) => {
+    setImagePreviews(prev => prev.map((img, i) => ({
+      ...img,
+      isPrimary: i === index
+    })))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -144,9 +214,12 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
         return
       }
 
+      let productId
+      
       if (product) {
         // Update product
         await api.put(`/products/${product.id}/`, formData)
+        productId = product.id
         
         // Update/Create/Delete variants
         for (const variant of validVariants) {
@@ -168,12 +241,10 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             await api.post('/products/variants/', variantData)
           }
         }
-        
-        onSuccess('Cập nhật sản phẩm và biến thể thành công!')
       } else {
         // Create product first
         const productResponse = await api.post('/products/', formData)
-        const productId = productResponse.data.id
+        productId = productResponse.data.id
         
         // Then create variants
         for (const variant of validVariants) {
@@ -188,9 +259,47 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           }
           await api.post('/products/variants/', variantData)
         }
-        
-        onSuccess('Thêm sản phẩm và biến thể thành công!')
       }
+      
+      // Upload images if any
+      if (images.length > 0) {
+        for (let i = 0; i < images.length; i++) {
+          const formDataImage = new FormData()
+          formDataImage.append('product', productId)
+          formDataImage.append('image', images[i])
+          
+          // Find corresponding preview to check if it's primary
+          const previewIndex = imagePreviews.findIndex(p => p.file === images[i])
+          if (previewIndex !== -1 && imagePreviews[previewIndex].isPrimary) {
+            formDataImage.append('is_primary', 'true')
+          } else {
+            formDataImage.append('is_primary', 'false')
+          }
+          formDataImage.append('sort_order', i)
+          
+          await api.post('/products/images/', formDataImage, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+        }
+      }
+      
+      // Update existing images' primary status if changed
+      for (let i = 0; i < imagePreviews.length; i++) {
+        const preview = imagePreviews[i]
+        if (preview.existing && preview.id) {
+          // Check if primary status needs update
+          const originalImage = product?.images?.find(img => img.id === preview.id)
+          if (originalImage && originalImage.is_primary !== preview.isPrimary) {
+            await api.patch(`/products/images/${preview.id}/`, {
+              is_primary: preview.isPrimary
+            })
+          }
+        }
+      }
+      
+      onSuccess(product ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!')
       onClose()
     } catch (err) {
       console.error('Error saving product:', err)
@@ -299,6 +408,70 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
               />
             </Grid>
           </Grid>
+
+          {/* Product Images */}
+          <Divider sx={productFormStyles.divider} />
+          <Box sx={productFormStyles.variantHeader}>
+            <Typography {...productFormStyles.variantTitle}>
+              Hình ảnh sản phẩm
+            </Typography>
+            <Button
+              component="label"
+              startIcon={<CloudUpload />}
+              variant="outlined"
+              size="small"
+            >
+              Tải ảnh lên
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+              />
+            </Button>
+          </Box>
+          
+          {imagePreviews.length > 0 && (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              {imagePreviews.map((preview, index) => (
+                <Grid item xs={6} sm={4} md={3} key={index}>
+                  <Card sx={{ position: 'relative' }}>
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={preview.url}
+                      alt={`Preview ${index + 1}`}
+                      sx={{ objectFit: 'cover' }}
+                    />
+                    <CardActions sx={{ 
+                      padding: '4px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      backgroundColor: 'rgba(0,0,0,0.03)'
+                    }}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleSetPrimaryImage(index)}
+                        color={preview.isPrimary ? 'warning' : 'default'}
+                        title={preview.isPrimary ? 'Ảnh chính' : 'Đặt làm ảnh chính'}
+                      >
+                        {preview.isPrimary ? <Star /> : <StarBorder />}
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleRemoveImage(index)}
+                        title="Xóa ảnh"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
 
           {/* Product Variants */}
           <Divider sx={productFormStyles.divider} />
