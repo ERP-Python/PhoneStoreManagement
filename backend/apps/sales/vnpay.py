@@ -24,7 +24,7 @@ class VNPayService:
         if not all([self.vnp_tmn_code, self.vnp_hash_secret, self.vnp_payment_url, self.vnp_return_url]):
             logger.warning("VNPay configuration is incomplete. Please check your environment variables.")
     
-    def create_payment_url(self, order_code, amount, order_desc, ip_addr, bank_code=None):
+    def create_payment_url(self, order_code, amount, order_desc, ip_addr, bank_code=None, card_type=None):
         """
         Create VNPay payment URL
         
@@ -34,6 +34,7 @@ class VNPayService:
             order_desc: Order description
             ip_addr: Client IP address
             bank_code: Bank code for direct payment (optional)
+            card_type: Card type (optional)
             
         Returns:
             Payment URL string
@@ -59,9 +60,13 @@ class VNPayService:
             if bank_code:
                 vnp_params['vnp_BankCode'] = bank_code
             
-            # Sort and create query string
+            # Add card type if specified
+            if card_type:
+                vnp_params['vnp_CardType'] = card_type
+            
+            # Sort and create query string - VNPAY specific format
             sorted_params = sorted(vnp_params.items())
-            query_string = '&'.join([f"{key}={urllib.parse.quote_plus(str(value))}" for key, value in sorted_params])
+            query_string = '&'.join([f"{key}={value}" for key, value in sorted_params])
             
             # Create secure hash
             secure_hash = self._create_secure_hash(query_string)
@@ -70,6 +75,9 @@ class VNPayService:
             payment_url = f"{self.vnp_payment_url}?{query_string}&vnp_SecureHash={secure_hash}"
             
             logger.info(f"Created VNPay payment URL for order {order_code}")
+            logger.info(f"Query string: {query_string}")
+            logger.info(f"Secure hash: {secure_hash}")
+            
             return payment_url
             
         except Exception as e:
@@ -92,9 +100,9 @@ class VNPayService:
             # Remove secure hash from params for validation
             params = {k: v for k, v in response_data.items() if k != 'vnp_SecureHash' and k != 'vnp_SecureHashType'}
             
-            # Sort and create query string
+            # Sort and create query string - VNPAY specific format
             sorted_params = sorted(params.items())
-            query_string = '&'.join([f"{key}={urllib.parse.quote_plus(str(value))}" for key, value in sorted_params])
+            query_string = '&'.join([f"{key}={value}" for key, value in sorted_params])
             
             # Create secure hash
             calculated_hash = self._create_secure_hash(query_string)
@@ -107,11 +115,26 @@ class VNPayService:
             amount = int(response_data.get('vnp_Amount', 0)) / 100  # Convert back from VNPay format
             order_code = response_data.get('vnp_TxnRef', '')
             response_code = response_data.get('vnp_ResponseCode', '')
+            bank_code = response_data.get('vnp_BankCode', '')
+            card_type = response_data.get('vnp_CardType', '')
+            pay_date = response_data.get('vnp_PayDate', '')
             
             # Check if payment was successful (response code 00 means success)
             is_success = is_valid and response_code == '00'
             
             logger.info(f"VNPay response validation - Order: {order_code}, Success: {is_success}, Response Code: {response_code}")
+            logger.info(f"Query string for validation: {query_string}")
+            logger.info(f"Calculated hash: {calculated_hash}")
+            logger.info(f"Received hash: {vnp_secure_hash}")
+            
+            # Add additional info to response data
+            response_data.update({
+                'vnp_txn_ref': order_code,
+                'vnp_response_code': response_code,
+                'vnp_bank_code': bank_code,
+                'vnp_card_type': card_type,
+                'vnp_pay_date': pay_date,
+            })
             
             return is_success, txn_code, amount, order_code, response_data
             
@@ -158,11 +181,6 @@ class VNPayService:
             'PUBLICBANK': 'Ngân hàng TNHH MTV Public Việt Nam (PublicBank)',
             'SEABANK': 'Ngân hàng TMCP Đông Nam Á (SeABank)',
             'SHB': 'Ngân hàng TMCP Sài Gòn - Hà Nội (SHB)',
-            'VAB': 'Ngân hàng TMCP Việt Á (VietABank)',
-            'VIB': 'Ngân hàng TMCP Quốc tế Việt Nam (VIB)',
-            'VIETBANK': 'Ngân hàng TMCP Việt Nam Thương Tín (VietBank)',
-            'VIETCOMBANK': 'Ngân hàng TMCP Ngoại thương Việt Nam (Vietcombank)',
-            'VIETINBANK': 'Ngân hàng TMCP Công thương Việt Nam (VietinBank)',
         }
     
     def get_payment_methods(self):
@@ -178,6 +196,20 @@ class VNPayService:
             'credit': 'Thẻ Credit/Debit',
             'qr': 'Thanh toán QR Code',
             'bank_transfer': 'Chuyển khoản ngân hàng',
+        }
+    
+    def get_card_types(self):
+        """
+        Get available card types for VNPay
+        
+        Returns:
+            Dictionary of card types
+        """
+        return {
+            'ATM': 'Thẻ ATM nội địa',
+            'CREDIT': 'Thẻ Credit',
+            'DEBIT': 'Thẻ Debit',
+            'PREPAID': 'Thẻ Prepaid',
         }
     
     def _create_secure_hash(self, query_string):
@@ -203,4 +235,4 @@ class VNPayService:
         Returns:
             Boolean indicating if in sandbox mode
         """
-        return 'sandbox' in self.vnp_payment_url.lower() 
+        return 'sandbox' in self.vnp_payment_url.lower()

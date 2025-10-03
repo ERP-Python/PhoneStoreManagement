@@ -8,6 +8,8 @@ from django.shortcuts import redirect
 from django.conf import settings
 import json
 import logging
+from datetime import datetime  # Add this import
+
 
 from .models import Order, Payment, StockOut
 from .serializers import (
@@ -389,3 +391,50 @@ def vnpay_config(request):
         'banks': vnpay.get_bank_list(),
         'payment_methods': vnpay.get_payment_methods(),
     }) 
+
+
+
+    # ... existing code ...
+
+@action(detail=False, methods=['get'])
+def test_vnpay_config(self, request):
+    """Test VNPay configuration and create sample payment URL"""
+    try:
+        vnpay = VNPayService()
+        
+        # Test configuration
+        config_status = {
+            'tmn_code': bool(vnpay.vnp_tmn_code),
+            'hash_secret': bool(vnpay.vnp_hash_secret),
+            'payment_url': bool(vnpay.vnp_payment_url),
+            'return_url': bool(vnpay.vnp_return_url),
+        }
+        
+        # Create test payment URL
+        test_order_code = f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        test_amount = 100000  # 100,000 VND
+        test_desc = "Test payment"
+        test_ip = "127.0.0.1"
+        
+        test_payment_url = vnpay.create_payment_url(
+            order_code=test_order_code,
+            amount=test_amount,
+            order_desc=test_desc,
+            ip_addr=test_ip
+        )
+        
+        return Response({
+            'config_status': config_status,
+            'is_sandbox': vnpay.is_sandbox_mode(),
+            'test_payment_url': test_payment_url,
+            'test_order_code': test_order_code,
+            'test_amount': test_amount,
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': str(e),
+            'config_status': config_status if 'config_status' in locals() else {}
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ... existing code ...
