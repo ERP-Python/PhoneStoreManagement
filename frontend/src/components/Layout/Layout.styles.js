@@ -32,11 +32,13 @@ export const layoutStyles = {
     backgroundColor: '#F5F6FA',
   },
   sidebarHeader: {
-    p: 3,
+    px: 3,
+    py: 2,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F5F6FA',
+    height: 72,
   },
   sidebarTitle: {
     color: '#2D3748',
@@ -48,7 +50,7 @@ export const layoutStyles = {
     flex: 1,
   },
   navItem: {
-    borderRadius: 2,
+    borderRadius: 4,
     mb: 0.5,
     px: 2,
     py: 1.5,
@@ -122,15 +124,15 @@ export const layoutStyles = {
     mr: 2,
   },
   navbarLogoImage: {
-    width: 40,
-    height: 40,
+    width: 80,
+    height: 80,
     borderRadius: 2,
     objectFit: 'contain',
   },
   navbarLogoText: {
     color: '#2D3748',
     fontWeight: 700,
-    fontSize: '1.3rem',
+    fontSize: '1.5rem',
   },
   headerActions: {
     display: 'flex',
@@ -153,24 +155,6 @@ export const layoutStyles = {
     fontSize: '0.9rem',
     fontWeight: 600,
     ml: 1,
-  },
-  breadcrumbContainer: {
-    mx: 3,
-    mt: 0,
-    p: 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
-    border: '1px solid #E2E8F0',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-  },
-  breadcrumbs: {
-    '& .MuiBreadcrumbs-separator': {
-      color: '#94a3b8',
-    },
-  },
-  breadcrumbItem: {
-    fontSize: '0.9rem',
-    fontWeight: 500,
   },
   content: {
     flex: 1,
