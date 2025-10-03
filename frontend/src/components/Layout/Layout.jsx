@@ -152,50 +152,6 @@ export default function Layout() {
         })}
       </List>
       
-      {/* Spacer to push user menu to bottom */}
-      <Box sx={{ flexGrow: 1 }} />
-      
-      {/* User menu in sidebar */}
-      <Box sx={layoutStyles.sidebarFooter}>
-        <Divider sx={{ borderColor: '#e2e8f0', mb: 2 }} />
-        <Box sx={layoutStyles.userSection}>
-          <Avatar sx={layoutStyles.userAvatar}>
-            {user?.username?.charAt(0).toUpperCase()}
-          </Avatar>
-          <Box sx={{ ml: 2, flex: 1 }}>
-            <Typography variant="body2" fontWeight={600} color="#2D3748">
-              {user?.username}
-            </Typography>
-            <Typography variant="caption" color="#718096">
-              {user?.email || 'admin@phonestore.com'}
-            </Typography>
-          </Box>
-          <IconButton 
-            onClick={handleMenu}
-            size="small"
-            sx={{ color: '#718096' }}
-          >
-            <Settings />
-          </IconButton>
-        </Box>
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleClose}
-          sx={layoutStyles.userMenu}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        >
-          <MenuItem onClick={handleClose} sx={layoutStyles.menuItem}>
-            <Settings sx={{ mr: 2 }} />
-            Settings
-          </MenuItem>
-          <MenuItem onClick={handleLogout} sx={layoutStyles.menuItem}>
-            <Logout sx={{ mr: 2 }} />
-            Logout
-          </MenuItem>
-        </Menu>
-      </Box>
     </Box>
   )
 
@@ -263,10 +219,34 @@ export default function Layout() {
               <IconButton sx={layoutStyles.headerActionButton}>
                 <Settings />
               </IconButton>
-              <Avatar sx={layoutStyles.headerAvatar}>
-                {user?.username?.charAt(0).toUpperCase()}
-              </Avatar>
+              <IconButton 
+                onClick={handleMenu}
+                sx={{ p: 0.5 }}
+              >
+                <Avatar sx={layoutStyles.headerAvatar}>
+                  {user?.username?.charAt(0).toUpperCase()}
+                </Avatar>
+              </IconButton>
             </Box>
+            
+            {/* User menu dropdown */}
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+              sx={layoutStyles.userMenu}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <MenuItem onClick={handleClose} sx={layoutStyles.menuItem}>
+                <Settings sx={{ mr: 2 }} />
+                Settings
+              </MenuItem>
+              <MenuItem onClick={handleLogout} sx={layoutStyles.menuItem}>
+                <Logout sx={{ mr: 2 }} />
+                Logout
+              </MenuItem>
+            </Menu>
           </Box>
         </Paper>
         

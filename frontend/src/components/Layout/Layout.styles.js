@@ -105,26 +105,6 @@ export const layoutStyles = {
     },
   },
 
-  // Sidebar Footer
-  sidebarFooter: {
-    p: 2,
-  },
-  userSection: {
-    display: 'flex',
-    alignItems: 'center',
-    p: 2,
-    borderRadius: 2,
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-  },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    backgroundColor: '#667eea',
-    color: '#fff',
-    fontSize: '0.9rem',
-    fontWeight: 600,
-  },
 
   // Main content styles
   main: {
