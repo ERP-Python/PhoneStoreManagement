@@ -220,16 +220,6 @@ export default function Layout() {
         <Box sx={layoutStyles.content}>
           <Outlet />
         </Box>
-
-        {/* Footer */}
-        <Paper component="footer" sx={layoutStyles.footer} elevation={0}>
-          <Typography variant="body2" color="text.secondary" align="center">
-            © 2025 Phone Store Management System. All rights reserved.
-          </Typography>
-          <Typography variant="caption" color="text.secondary" align="center">
-            Built with Material-UI & React
-          </Typography>
-        </Paper>
       </Box>
     </Box>
   )
