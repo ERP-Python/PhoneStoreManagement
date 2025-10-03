@@ -80,7 +80,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           description: product.description || '',
           is_active: product.is_active !== undefined ? product.is_active : true
         })
-        
+
         // Load variants if available
         if (product.variants && product.variants.length > 0) {
           setVariants(product.variants.map(v => ({
@@ -237,7 +237,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target
     const newValue = type === 'checkbox' ? checked : value
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: newValue
@@ -270,7 +270,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
 
   const handleVariantChange = (index, field, value) => {
     const newVariants = [...variants]
-    
+
     // Handle price separately to format it
     if (field === 'price') {
       const rawValue = parsePrice(value)
@@ -282,20 +282,20 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
       // Validate variant field
       validateField(field, value, index)
     }
-    
+
     // If user is manually editing SKU field, mark it as manually set
     if (field === 'sku') {
       newVariants[index].skuManuallySet = true
     }
-    
+
     // Auto-generate SKU only if:
     // 1. It's a new variant (no id from DB)
     // 2. AND user hasn't manually set the SKU
     // 3. AND we're changing ram/rom/color fields
-    if (['ram', 'rom', 'color'].includes(field) && 
-        formData.sku && 
-        !newVariants[index].id && 
-        !newVariants[index].skuManuallySet) {
+    if (['ram', 'rom', 'color'].includes(field) &&
+      formData.sku &&
+      !newVariants[index].id &&
+      !newVariants[index].skuManuallySet) {
       const v = newVariants[index]
       if (v.ram || v.rom || v.color) {
         const parts = [formData.sku]
@@ -305,7 +305,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
         newVariants[index].sku = parts.join('-')
       }
     }
-    
+
     setVariants(newVariants)
   }
 
@@ -316,7 +316,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
   const handleRemoveVariant = (index) => {
     if (variants.length > 1) {
       setVariants(variants.filter((_, i) => i !== index))
-      
+
       // Remove validation errors for this variant
       const newErrors = { ...validationErrors }
       Object.keys(newErrors).forEach(key => {
@@ -395,7 +395,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     // Validate form before submitting
     if (!validateForm()) {
       setError('Vui lòng kiểm tra lại các trường thông tin')
@@ -417,7 +417,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
       if (product) {
         // Update product
         await api.put(`/products/${product.id}/`, formData)
-        
+
         // Update/Create/Delete variants
         for (const variant of validVariants) {
           const variantData = {
@@ -429,7 +429,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             price: parseFloat(variant.price),
             is_active: variant.is_active
           }
-          
+
           if (variant.id) {
             // Update existing variant
             await api.put(`/products/variants/${variant.id}/`, variantData)
@@ -438,13 +438,13 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             await api.post('/products/variants/', variantData)
           }
         }
-        
+
         onSuccess('Cập nhật sản phẩm và biến thể thành công!')
       } else {
         // Create product first
         const productResponse = await api.post('/products/', formData)
         const productId = productResponse.data.id
-        
+
         // Then create variants
         for (const variant of validVariants) {
           const variantData = {
@@ -458,7 +458,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           }
           await api.post('/products/variants/', variantData)
         }
-        
+
         onSuccess('Thêm sản phẩm và biến thể thành công!')
       }
       onClose()
