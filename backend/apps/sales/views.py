@@ -7,12 +7,15 @@ from django.utils import timezone
 from django.shortcuts import redirect
 from django.conf import settings
 import json
+import logging
 
 from .models import Order, Payment, StockOut
 from .serializers import (
     OrderSerializer, PaymentSerializer, StockOutSerializer
 )
 from .vnpay import VNPayService
+
+logger = logging.getLogger(__name__)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -64,6 +67,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Get bank code from request (optional)
+        bank_code = request.data.get('bank_code', None)
+        
         # Create payment record
         payment = Payment.objects.create(
             order=order,
@@ -75,18 +81,49 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Generate VNPay payment URL
         vnpay = VNPayService()
         
-        payment_url = vnpay.create_payment_url(
-            order_code=order.code,
-            amount=float(order.total),
-            order_desc=f"Thanh toan don hang {order.code}",
-            ip_addr=self.get_client_ip(request)
-        )
-        
+        try:
+            payment_url = vnpay.create_payment_url(
+                order_code=order.code,
+                amount=float(order.total),
+                order_desc=f"Thanh toan don hang {order.code}",
+                ip_addr=self.get_client_ip(request),
+                bank_code=bank_code
+            )
+            
+            return Response({
+                'payment_id': payment.id,
+                'payment_url': payment_url,
+                'order_code': order.code,
+                'amount': float(order.total),
+                'is_sandbox': vnpay.is_sandbox_mode(),
+                'bank_code': bank_code
+            })
+            
+        except Exception as e:
+            logger.error(f"Error creating VNPay payment: {str(e)}")
+            return Response(
+                {'error': 'Failed to create payment URL'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def vnpay_banks(self, request):
+        """Get list of supported banks for VNPay"""
+        vnpay = VNPayService()
+        banks = vnpay.get_bank_list()
         return Response({
-            'payment_id': payment.id,
-            'payment_url': payment_url,
-            'order_code': order.code,
-            'amount': float(order.total)
+            'banks': banks,
+            'is_sandbox': vnpay.is_sandbox_mode()
+        })
+    
+    @action(detail=False, methods=['get'])
+    def vnpay_payment_methods(self, request):
+        """Get available payment methods for VNPay"""
+        vnpay = VNPayService()
+        methods = vnpay.get_payment_methods()
+        return Response({
+            'methods': methods,
+            'is_sandbox': vnpay.is_sandbox_mode()
         })
     
     @action(detail=True, methods=['post'])
@@ -250,6 +287,8 @@ def vnpay_return(request):
     vnpay = VNPayService()
     response_data = request.GET.dict()
     
+    logger.info(f"VNPay return callback received: {response_data}")
+    
     # Validate VNPay response
     is_success, txn_code, amount, order_code, raw_response = vnpay.validate_response(response_data)
     
@@ -271,8 +310,11 @@ def vnpay_return(request):
                 order.status = 'paid'
                 order.paid_total = amount
                 order.save()
+                
+                logger.info(f"Payment successful for order {order_code}")
             else:
                 payment.status = 'failed'
+                logger.warning(f"Payment failed for order {order_code}")
             
             payment.save()
         
@@ -283,8 +325,10 @@ def vnpay_return(request):
         return redirect(redirect_url)
         
     except Order.DoesNotExist:
+        logger.error(f"Order not found: {order_code}")
         return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
+        logger.error(f"Error processing VNPay return: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -297,6 +341,8 @@ def vnpay_ipn(request):
     """
     vnpay = VNPayService()
     response_data = request.data if request.data else request.GET.dict()
+    
+    logger.info(f"VNPay IPN received: {response_data}")
     
     # Validate VNPay response
     is_success, txn_code, amount, order_code, raw_response = vnpay.validate_response(response_data)
@@ -316,9 +362,30 @@ def vnpay_ipn(request):
             order.paid_total = amount
             order.save()
             
+            logger.info(f"IPN payment successful for order {order_code}")
             return Response({'RspCode': '00', 'Message': 'Success'})
         
+        logger.warning(f"IPN payment failed for order {order_code}")
         return Response({'RspCode': '01', 'Message': 'Order not found or payment failed'})
         
     except Exception as e:
-        return Response({'RspCode': '99', 'Message': str(e)}) 
+        logger.error(f"Error processing VNPay IPN: {str(e)}")
+        return Response({'RspCode': '99', 'Message': str(e)})
+
+
+# Additional VNPay utility views
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def vnpay_config(request):
+    """
+    Get VNPay configuration for frontend
+    """
+    vnpay = VNPayService()
+    
+    return Response({
+        'is_sandbox': vnpay.is_sandbox_mode(),
+        'payment_url': vnpay.vnp_payment_url,
+        'return_url': vnpay.vnp_return_url,
+        'banks': vnpay.get_bank_list(),
+        'payment_methods': vnpay.get_payment_methods(),
+    }) 
