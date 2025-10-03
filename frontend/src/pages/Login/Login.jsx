@@ -18,11 +18,11 @@ import {
   Person,
   Lock,
   Visibility,
-  VisibilityOff,
-  PhoneAndroid
+  VisibilityOff
 } from '@mui/icons-material'
 import { useAuth } from '../../context/AuthContext'
 import { loginStyles } from './Login.styles'
+import logo from '../../assets/images/logo.png'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -62,9 +62,11 @@ export default function Login() {
               <Paper elevation={12} sx={loginStyles.paper}>
                 {/* Avatar Logo */}
                 <Box sx={loginStyles.avatarContainer}>
-                  <Avatar sx={loginStyles.avatar}>
-                    <PhoneAndroid sx={loginStyles.avatarIcon} />
-                  </Avatar>
+                    <img 
+                      src={logo} 
+                      alt="Phone Store Logo" 
+                      style={{ width: '70%', height: '50%%', objectFit: 'contain' }}
+                    />
                 </Box>
                 
                 {/* Title */}
