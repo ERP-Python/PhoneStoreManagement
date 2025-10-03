@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'  // ← THÊM DÒNG NÀY
 import {
   Typography,
   Box,
@@ -40,6 +41,9 @@ import { ordersStyles, statusColors, statusLabels } from './Orders.styles'
 
 export default function Orders() {
   const { showInfo } = useAlert()
+  const location = useLocation()
+  const navigate = useNavigate()
+  
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -84,6 +88,30 @@ export default function Orders() {
       setLoading(false)
     }
   }
+
+  // Handle VNPay payment callback
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const paymentStatus = params.get('payment_status')
+    
+    if (paymentStatus === 'success') {
+      setNotification({
+        open: true,
+        message: '✅ Thanh toán VNPay thành công!',
+        severity: 'success'
+      })
+      fetchOrders()
+      navigate('/orders', { replace: true })
+    } else if (paymentStatus === 'failed') {
+      setNotification({
+        open: true,
+        message: '❌ Thanh toán VNPay thất bại. Vui lòng thử lại.',
+        severity: 'error'
+      })
+      fetchOrders()
+      navigate('/orders', { replace: true })
+    }
+  }, [location.search, navigate])
 
   useEffect(() => {
     fetchOrders()

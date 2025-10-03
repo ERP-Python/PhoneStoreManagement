@@ -489,8 +489,9 @@ def vnpay_return(request):
             logger.warning(f"No pending payment found for order {order_code}")
         
         # Redirect to frontend with payment status
+                # Redirect to frontend with payment status
         frontend_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:3000'
-        redirect_url = f"{frontend_url}/orders/{order.id}?payment_status={'success' if is_success else 'failed'}"
+        redirect_url = f"{frontend_url}/orders?payment_status={'success' if is_success else 'failed'}"
         
         logger.info(f"Redirecting to: {redirect_url}")
         logger.info("=" * 80)

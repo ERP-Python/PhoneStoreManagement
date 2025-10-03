@@ -83,11 +83,12 @@ class VNPayService:
             if card_type:
                 vnp_params['vnp_CardType'] = card_type
             
-            # Sort and create query string - VNPAY specific format
+            # Sort and create query string with URL encoding
             sorted_params = sorted(vnp_params.items())
-# URL encode each value properly for VNPay
-            query_string = '&'.join([f"{key}={urllib.parse.quote_plus(str(value))}" for key, value in sorted_params])    
-                    # Debug: Log all parameters
+            # URL encode each value properly for VNPay
+            query_string = '&'.join([f"{key}={urllib.parse.quote_plus(str(value))}" for key, value in sorted_params])
+            
+            # Debug: Log all parameters
             logger.info("=" * 80)
             logger.info(f"CREATE PAYMENT URL FOR ORDER: {order_code}")
             logger.info("-" * 80)
@@ -134,9 +135,10 @@ class VNPayService:
             # Remove secure hash from params for validation
             params = {k: v for k, v in response_data.items() if k != 'vnp_SecureHash' and k != 'vnp_SecureHashType'}
             
-            # Sort and create query string - VNPAY specific format
+            # Sort and create query string with URL encoding (must match VNPay's format)
             sorted_params = sorted(params.items())
-            query_string = '&'.join([f"{key}={value}" for key, value in sorted_params])
+            # URL encode each value to match VNPay's hash calculation
+            query_string = '&'.join([f"{key}={urllib.parse.quote_plus(str(value))}" for key, value in sorted_params])
             
             # Create secure hash
             calculated_hash = self._create_secure_hash(query_string)
