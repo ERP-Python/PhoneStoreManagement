@@ -32,11 +32,13 @@ export const layoutStyles = {
     backgroundColor: '#F5F6FA',
   },
   sidebarHeader: {
-    p: 3,
+    px: 3,
+    py: 2,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F5F6FA',
+    height: 72,
   },
   sidebarTitle: {
     color: '#2D3748',
@@ -48,7 +50,7 @@ export const layoutStyles = {
     flex: 1,
   },
   navItem: {
-    borderRadius: 2,
+    borderRadius: 4,
     mb: 0.5,
     px: 2,
     py: 1.5,
@@ -122,15 +124,15 @@ export const layoutStyles = {
     mr: 2,
   },
   navbarLogoImage: {
-    width: 40,
-    height: 40,
+    width: 80,
+    height: 80,
     borderRadius: 2,
     objectFit: 'contain',
   },
   navbarLogoText: {
     color: '#2D3748',
     fontWeight: 700,
-    fontSize: '1.3rem',
+    fontSize: '1.5rem',
   },
   headerActions: {
     display: 'flex',

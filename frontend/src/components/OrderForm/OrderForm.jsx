@@ -81,15 +81,18 @@ export default function OrderForm({ open, onClose, onSuccess }) {
       if (variant) {
         newItems[index].unit_price = variant.price
         
-        // Fetch current stock
+        // Fetch current stock from database
         try {
           const response = await api.get(`/inventory/?product_variant=${value}`)
           const inventoryData = response.data.results || response.data
           if (inventoryData.length > 0) {
-            const availableStock = inventoryData[0].on_hand - (inventoryData[0].reserved || 0)
-            newItems[index].available_stock = Math.max(0, availableStock)
+            // Get actual on_hand quantity from database
+            const onHand = inventoryData[0].on_hand || 0
+            newItems[index].available_stock = Math.max(0, onHand)
+            console.log(`Stock for variant ${value}:`, onHand)
           } else {
             newItems[index].available_stock = 0
+            console.log(`No inventory found for variant ${value}`)
           }
         } catch (err) {
           console.error('Error fetching stock:', err)
@@ -170,8 +173,12 @@ export default function OrderForm({ open, onClose, onSuccess }) {
       }
 
       await api.post('/orders/', orderData)
+      
       onSuccess('Tạo đơn hàng thành công!')
       onClose()
+      
+      // Refresh product variants to get updated inventory for next order
+      await fetchProductVariants()
     } catch (err) {
       console.error('Error creating order:', err)
       setError(err.response?.data?.detail || err.response?.data?.error || 'Có lỗi xảy ra khi tạo đơn hàng')
