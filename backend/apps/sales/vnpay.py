@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import urllib.parse
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,10 @@ class VNPayService:
             Payment URL string
         """
         try:
+            # Calculate create date and expire date (15 minutes from now)
+            create_date = datetime.now().strftime('%Y%m%d%H%M%S')
+            expire_date = (datetime.now() + timedelta(minutes=15)).strftime('%Y%m%d%H%M%S')
+            
             # VNPay parameters
             vnp_params = {
                 'vnp_Version': '2.1.0',
@@ -53,7 +57,8 @@ class VNPayService:
                 'vnp_Locale': 'vn',
                 'vnp_ReturnUrl': self.vnp_return_url,
                 'vnp_IpAddr': ip_addr,
-                'vnp_CreateDate': datetime.now().strftime('%Y%m%d%H%M%S'),
+                'vnp_CreateDate': create_date,
+                'vnp_ExpireDate': expire_date,  # Payment expires after 15 minutes
             }
             
             # Add bank code if specified
