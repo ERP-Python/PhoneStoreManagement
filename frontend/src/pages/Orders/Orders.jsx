@@ -35,6 +35,7 @@ import api from '../../api/axios'
 import OrderForm from '../../components/OrderForm/OrderForm'
 import Notification from '../../components/Notification/Notification'
 import PaymentDialog from '../../components/PaymentDialog/PaymentDialog'
+import OrderDetailDialog from '../../components/OrderDetailDialog/OrderDetailDialog'
 import { ordersStyles, statusColors, statusLabels } from './Orders.styles'
 
 export default function Orders() {
@@ -51,6 +52,8 @@ export default function Orders() {
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' })
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState(null)
 
   const fetchOrders = async () => {
     try {
@@ -138,6 +141,21 @@ export default function Orders() {
   const handlePaymentSuccess = (message) => {
     fetchOrders()
     setNotification({ open: true, message, severity: 'success' })
+  }
+
+  const handleViewDetail = (order) => {
+    setSelectedOrderForDetail(order)
+    setDetailDialogOpen(true)
+  }
+
+  const handleDetailClose = () => {
+    setDetailDialogOpen(false)
+    setSelectedOrderForDetail(null)
+  }
+
+  const handlePrint = (order) => {
+    // TODO: Implement print functionality
+    showInfo(`In hóa đơn #${order.code}`)
   }
 
   if (loading && orders.length === 0) {
@@ -277,7 +295,7 @@ export default function Orders() {
                     <IconButton
                       size="small"
                       color="primary"
-                      onClick={() => showInfo(`Xem chi tiết đơn hàng #${order.code}`)}
+                      onClick={() => handleViewDetail(order)}
                       title="Xem chi tiết"
                     >
                       <ViewIcon fontSize="small" />
@@ -285,7 +303,7 @@ export default function Orders() {
                     <IconButton
                       size="small"
                       color="info"
-                      onClick={() => showInfo(`In hóa đơn #${order.code}`)}
+                      onClick={() => handlePrint(order)}
                       title="In hóa đơn"
                     >
                       <PrintIcon fontSize="small" />
@@ -320,6 +338,14 @@ export default function Orders() {
         onClose={() => setPaymentDialogOpen(false)}
         order={selectedOrder}
         onSuccess={handlePaymentSuccess}
+      />
+
+      <OrderDetailDialog
+        open={detailDialogOpen}
+        onClose={handleDetailClose}
+        order={selectedOrderForDetail}
+        onPrint={handlePrint}
+        onPayment={handlePayment}
       />
 
       <Notification
