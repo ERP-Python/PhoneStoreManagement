@@ -96,19 +96,11 @@ export default function Layout() {
 
   const drawer = (
     <Box sx={layoutStyles.sidebarContainer}>
-      {/* Sidebar Header with Logo */}
+      {/* Sidebar Header */}
       <Box sx={layoutStyles.sidebarHeader}>
-        <Box sx={layoutStyles.logoContainer}>
-          <Box 
-            component="img"
-            src={logoImage}
-            alt="Phone Store Logo"
-            sx={layoutStyles.logoImage}
-          />
-          <Typography variant="h6" sx={layoutStyles.logoText}>
-            Phone Store
-          </Typography>
-        </Box>
+        <Typography variant="h6" sx={layoutStyles.sidebarTitle}>
+          Menu
+        </Typography>
       </Box>
       
       <Divider sx={{ borderColor: '#e2e8f0' }} />
@@ -182,6 +174,19 @@ export default function Layout() {
         {/* New Header inside main content */}
         <Paper sx={layoutStyles.mainHeader} elevation={0}>
           <Box sx={layoutStyles.headerContent}>
+            {/* Logo in navbar - leftmost position */}
+            <Box sx={layoutStyles.navbarLogoContainer}>
+              <Box 
+                component="img"
+                src={logoImage}
+                alt="Phone Store Logo"
+                sx={layoutStyles.navbarLogoImage}
+              />
+              <Typography variant="h6" sx={layoutStyles.navbarLogoText}>
+                Phone Store
+              </Typography>
+            </Box>
+            
             {/* Mobile menu button */}
             <IconButton
               color="inherit"
@@ -191,7 +196,6 @@ export default function Layout() {
             >
               <MenuIcon />
             </IconButton>
-            
             
             {/* Right side actions */}
             <Box sx={layoutStyles.headerActions}>

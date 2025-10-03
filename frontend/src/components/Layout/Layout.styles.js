@@ -38,25 +38,7 @@ export const layoutStyles = {
     justifyContent: 'center',
     backgroundColor: '#F5F6FA',
   },
-  logoContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#667eea',
-    fontSize: '1.2rem',
-    color: '#fff',
-  },
-  logoImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 2,
-    objectFit: 'contain',
-  },
-  logoText: {
+  sidebarTitle: {
     color: '#2D3748',
     fontWeight: 700,
     fontSize: '1.3rem',
@@ -124,14 +106,31 @@ export const layoutStyles = {
   headerContent: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     px: 3,
     py: 2,
   },
   mobileMenuIcon: {
     mr: 2,
-    display: { sm: 'none' },
+    display: { xs: 'block', sm: 'none' },
     color: '#2D3748',
+  },
+  navbarLogoContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    mr: 2,
+  },
+  navbarLogoImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 2,
+    objectFit: 'contain',
+  },
+  navbarLogoText: {
+    color: '#2D3748',
+    fontWeight: 700,
+    fontSize: '1.3rem',
   },
   headerActions: {
     display: 'flex',
