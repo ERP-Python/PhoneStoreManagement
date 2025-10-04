@@ -78,12 +78,20 @@ export default function Dashboard() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
 
-  const handleOrdersClick = () => {
-    navigate('/orders')
+  const handleOrdersTodayClick = () => {
+    navigate('/reports')
   }
 
   const handleCustomersClick = () => {
     navigate('/customers')
+  }
+
+   const handleReportsClick = () => {
+    navigate('/reports')
+  }
+
+  const handleInventoryClick = () => {
+    navigate('/inventory')
   }
 
   useEffect(() => {
@@ -199,6 +207,7 @@ export default function Dashboard() {
             color="success"
             change={12.5}
             changeType="increase"
+            onClick={handleReportsClick}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -209,7 +218,7 @@ export default function Dashboard() {
             color="primary"
             change={8.2}
             changeType="increase"
-            onClick={handleOrdersClick}
+            onClick={handleOrdersTodayClick}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -220,6 +229,7 @@ export default function Dashboard() {
             color="warning"
             change={3.1}
             changeType="decrease"
+            onClick={handleInventoryClick}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
