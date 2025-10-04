@@ -9,9 +9,7 @@ class BrandSerializer(serializers.ModelSerializer):
         model = Brand
         fields = ['id', 'name', 'slug', 'description', 'logo', 'is_active', 
                   'products_count', 'created_at', 'updated_at']
-                  
         read_only_fields = ['id', 'created_at', 'updated_at']
-
 
     def get_products_count(self, obj):
         return obj.products.filter(is_active=True).count()
