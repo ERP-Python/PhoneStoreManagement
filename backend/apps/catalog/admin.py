@@ -25,7 +25,6 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ['name', 'sku', 'brand', 'is_active', 'created_at']
     list_filter = ['brand', 'is_active', 'created_at']
     search_fields = ['name', 'sku', 'barcode']
-    
     inlines = [ProductVariantInline, ProductImageInline]
 
 
