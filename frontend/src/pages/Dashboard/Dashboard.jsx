@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import LowStockAlert from '../../components/LowStockAlert/LowStockAlert'
 import { 
   Grid, 
   Paper, 
@@ -76,6 +77,7 @@ export default function Dashboard() {
   const [topProducts, setTopProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [lowStockAlertOpen, setLowStockAlertOpen] = useState(false)
   const navigate = useNavigate()
 
   const handleOrdersClick = () => {
@@ -220,6 +222,7 @@ export default function Dashboard() {
             color="warning"
             change={3.1}
             changeType="decrease"
+            onClick={() => setLowStockAlertOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -455,6 +458,12 @@ export default function Dashboard() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Low Stock Alert Dialog */}
+      <LowStockAlert 
+        open={lowStockAlertOpen} 
+        onClose={() => setLowStockAlertOpen(false)} 
+      />
     </Box>
   )
 }

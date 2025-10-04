@@ -44,6 +44,7 @@ class OrderSerializer(serializers.ModelSerializer):
     customer_details = CustomerSerializer(source='customer', read_only=True)
     customer_name = serializers.CharField(source='customer.name', read_only=True, allow_null=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    code = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = Order
