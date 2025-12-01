@@ -52,8 +52,8 @@ const styles = {
     borderRadius: 3,
     boxShadow: '0px 2px 10px rgba(0,0,0,0.03)',
     transition: 'transform 0.2s',
-    width: 'fit-content',  
-    minWidth: '250px',    
+    width: 'fit-content',
+    minWidth: '250px',
     '&:hover': {
       transform: 'translateY(-4px)',
       boxShadow: '0px 8px 20px rgba(0,0,0,0.06)',
@@ -66,7 +66,7 @@ const styles = {
   },
   iconAvatar: {
     width: 42,
-    height: 42, 
+    height: 42,
     borderRadius: 2
   },
   notificationCard: {
@@ -174,11 +174,11 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
   };
 
   return (
-    <Card 
+    <Card
       sx={{
         ...styles.statCard,
         cursor: onClick ? 'pointer' : 'default',
-      }} 
+      }}
       onClick={onClick}
     >
       {/* Đã sửa: Giảm padding mặc định của CardContent (p: 2) và padding dưới cùng */}
@@ -194,9 +194,9 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
               {value}
             </Typography>
           </Box>
-          <Avatar variant="rounded" sx={{ 
-            ...styles.iconAvatar, 
-            backgroundColor: bgColors[color] || bgColors.primary, 
+          <Avatar variant="rounded" sx={{
+            ...styles.iconAvatar,
+            backgroundColor: bgColors[color] || bgColors.primary,
             color: textColors[color] || textColors.primary,
             ml: 2,
             flexShrink: 0
@@ -204,7 +204,7 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
             {icon}
           </Avatar>
         </Box>
-        
+
         {change && (
           // Đã sửa: Giảm margin top từ 2 xuống 1.5 để kéo phần chip lên gần số tiền hơn
           <Box sx={{ display: 'flex', alignItems: 'center', mt: 1.5 }}>
@@ -213,9 +213,9 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
               label={`${change}%`}
               size="small"
               color={changeType === 'increase' ? 'success' : 'error'}
-              sx={{ 
+              sx={{
                 height: 22, // Chip nhỏ lại xíu
-                fontWeight: 600, 
+                fontWeight: 600,
                 fontSize: '0.75rem',
                 backgroundColor: changeType === 'increase' ? '#e8f5e9' : '#ffebee',
                 color: changeType === 'increase' ? '#2e7d32' : '#c62828',
@@ -244,8 +244,8 @@ export default function Dashboard() {
   const [dailyStats, setDailyStats] = useState(null)
   const [monthlyStats, setMonthlyStats] = useState(null)
   const [yearlyStats, setYearlyStats] = useState(null)
-  const [chartPeriod, setChartPeriod] = useState('7days') 
-  const [activities, setActivities] = useState([]) 
+  const [chartPeriod, setChartPeriod] = useState('7days')
+  const [activities, setActivities] = useState([])
   const navigate = useNavigate()
 
   // --- Handlers ---
@@ -266,7 +266,7 @@ export default function Dashboard() {
     fetchMonthlyStats()
     fetchYearlyStats()
     fetchActivities()
-    
+
     // Auto-refresh data mỗi 30 giây
     const interval = setInterval(() => {
       fetchStats()
@@ -277,7 +277,7 @@ export default function Dashboard() {
       fetchYearlyStats()
       fetchActivities()
     }, 30000) // 30 giây
-    
+
     return () => clearInterval(interval)
   }, [])
 
@@ -362,8 +362,8 @@ export default function Dashboard() {
 
   const fetchTopProducts = async () => {
     try {
-      const response = await api.get('/reports/top-products/', { 
-        params: { limit: 4, period: 'month' } 
+      const response = await api.get('/reports/top-products/', {
+        params: { limit: 4, period: 'month' }
       })
       setTopProducts(response.data.top_by_quantity || [])
     } catch (error) {
@@ -432,15 +432,15 @@ export default function Dashboard() {
 
   const getChangeInfo = (today, previous) => {
     if (previous === 0) {
-      return { 
-        change: 0, 
+      return {
+        change: 0,
         changeType: today > 0 ? 'increase' : 'decrease',
         description: 'Không có dữ liệu kỳ trước'
       };
     }
     const diff = today - previous;
     const percentChange = (diff / previous * 100).toFixed(1);
-    
+
     let periodText = 'kỳ trước';
     if (viewType === 'daily') {
       periodText = 'hôm qua';
@@ -449,7 +449,7 @@ export default function Dashboard() {
     } else if (viewType === 'yearly') {
       periodText = 'năm trước';
     }
-    
+
     return {
       change: Math.abs(percentChange),
       changeType: diff >= 0 ? 'increase' : 'decrease',
@@ -506,27 +506,27 @@ export default function Dashboard() {
         </Box>
 
         <Stack direction="row" spacing={2} alignItems="center">
-           <Tooltip title="Làm mới dữ liệu">
-              <IconButton size="small" onClick={() => {
-                fetchStats()
-                fetchSalesChart()
-                fetchTopProducts()
-                fetchDailyStats()
-                fetchMonthlyStats()
-                fetchYearlyStats()
-                fetchActivities()
-              }} sx={{ bgcolor: 'white', border: '1px solid #e2e8f0' }}>
-                 <Refresh fontSize="small"/>
-              </IconButton>
-           </Tooltip>
-           
-           <ToggleButtonGroup
+          <Tooltip title="Làm mới dữ liệu">
+            <IconButton size="small" onClick={() => {
+              fetchStats()
+              fetchSalesChart()
+              fetchTopProducts()
+              fetchDailyStats()
+              fetchMonthlyStats()
+              fetchYearlyStats()
+              fetchActivities()
+            }} sx={{ bgcolor: 'white', border: '1px solid #e2e8f0' }}>
+              <Refresh fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          <ToggleButtonGroup
             value={viewType}
             exclusive
             onChange={handleViewChange}
             aria-label="time range"
             size="small"
-            sx={{ 
+            sx={{
               backgroundColor: 'white',
               '& .MuiToggleButton-root': {
                 border: '1px solid #e2e8f0',
@@ -561,11 +561,11 @@ export default function Dashboard() {
       {/* Stats Cards */}
       <Grid container spacing={3} sx={dashboardStyles.statsGrid}>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
+          <StatCard
             title={
               viewType === 'daily' ? 'Doanh Thu' :
-              viewType === 'monthly' ? 'Doanh Thu' :
-              'Doanh Thu'
+                viewType === 'monthly' ? 'Doanh Thu' :
+                  'Doanh Thu'
             }
             value={formatCurrency(currentRevenue)}
             icon={<AttachMoney />}
@@ -576,7 +576,7 @@ export default function Dashboard() {
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
+          <StatCard
             title="Đơn Hàng"
             value={currentOrders}
             icon={<ShoppingCart />}
@@ -588,7 +588,7 @@ export default function Dashboard() {
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
+          <StatCard
             title="Sắp hết hàng"
             value={todayInventory}
             icon={<Inventory />}
@@ -597,7 +597,7 @@ export default function Dashboard() {
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
+          <StatCard
             title="Khách hàng"
             value={todayCustomers}
             icon={<People />}
@@ -628,60 +628,60 @@ export default function Dashboard() {
                     }}
                     aria-label="chart period"
                     size="small"
-                    sx={{ 
+                    sx={{
                       backgroundColor: '#f5f5f5',
                       '& .MuiToggleButton-root': {
-                      border: '1px solid #e2e8f0',
-                      px: 1.5,
-                      py: 0.4,
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      color: '#64748b',
-                      fontSize: '0.85rem',
-                      '&.Mui-selected': {
-                        backgroundColor: '#667eea',
-                        color: 'white',
-                        '&:hover': {
-                          backgroundColor: '#5a67d8',
+                        border: '1px solid #e2e8f0',
+                        px: 1.5,
+                        py: 0.4,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        color: '#64748b',
+                        fontSize: '0.85rem',
+                        '&.Mui-selected': {
+                          backgroundColor: '#667eea',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: '#5a67d8',
+                          }
                         }
                       }
-                    }
-                  }}
-                >
-                  <ToggleButton value="7days">7 ngày qua</ToggleButton>
-                  <ToggleButton value="12months">12 tháng qua</ToggleButton>
-                </ToggleButtonGroup>
+                    }}
+                  >
+                    <ToggleButton value="7days">7 ngày qua</ToggleButton>
+                    <ToggleButton value="12months">12 tháng qua</ToggleButton>
+                  </ToggleButtonGroup>
                 </Box>
               </Box>
               <Box sx={{ mt: 3, height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={salesData.length ? salesData : mockSalesData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis 
-                      dataKey="name" 
+                    <XAxis
+                      dataKey="name"
                       tick={{ fontSize: 12, fill: '#64748b' }}
                       axisLine={{ stroke: '#e2e8f0' }}
                       tickLine={false}
                     />
-                    <YAxis 
+                    <YAxis
                       tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
                       tick={{ fontSize: 12, fill: '#64748b' }}
                       axisLine={false}
                       tickLine={false}
                     />
-                    <RechartsTooltip 
+                    <RechartsTooltip
                       formatter={(value) => formatCurrency(value)}
                       cursor={{ fill: 'transparent' }}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
+                      contentStyle={{
+                        backgroundColor: '#fff',
                         border: 'none',
                         borderRadius: '8px',
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <Bar 
-                      dataKey="doanhthu" 
-                      fill="#667eea" 
+                    <Bar
+                      dataKey="doanhthu"
+                      fill="#667eea"
                       radius={[4, 4, 0, 0]}
                       barSize={40}
                     />
@@ -699,12 +699,12 @@ export default function Dashboard() {
               <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center' }}>
                 Phân bố sản phẩm
               </Typography>
-              <Box sx={{ 
-                mt: 2, 
-                height: 350, 
-                display: 'flex', 
+              <Box sx={{
+                mt: 2,
+                height: 350,
+                display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center', 
+                alignItems: 'center',
                 justifyContent: 'center'
               }}>
                 <ResponsiveContainer width="100%" height="80%">
@@ -719,31 +719,31 @@ export default function Dashboard() {
                       dataKey="value"
                     >
                       {pieData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.color} 
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
                           stroke="none"
                         />
                       ))}
                     </Pie>
-                    <RechartsTooltip 
+                    <RechartsTooltip
                       formatter={(value) => `${value}%`}
                       contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  justifyContent: 'center', 
+                <Box sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
                   gap: 2,
                   mt: 0
                 }}>
                   {pieData.map((entry, index) => (
                     <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ 
-                        width: 10, 
-                        height: 10, 
+                      <Box sx={{
+                        width: 10,
+                        height: 10,
                         backgroundColor: entry.color,
                         borderRadius: '50%'
                       }} />
@@ -774,16 +774,16 @@ export default function Dashboard() {
                 {activities.length > 0 ? (
                   activities.map((activity, index) => (
                     <Box key={index} sx={dashboardStyles.activityItem}>
-                      <Avatar sx={{ 
-                        width: 32, 
-                        height: 32, 
+                      <Avatar sx={{
+                        width: 32,
+                        height: 32,
                         backgroundColor: activity.type === 'order' ? 'primary.main' :
-                                       activity.type === 'low_stock' ? 'warning.main' :
-                                       activity.type === 'customer' ? 'success.main' : 'info.main'
+                          activity.type === 'low_stock' ? 'warning.main' :
+                            activity.type === 'customer' ? 'success.main' : 'info.main'
                       }}>
-                        {activity.type === 'order' ? <ShoppingCart sx={{ fontSize: '1rem'}} /> :
-                         activity.type === 'low_stock' ? <Inventory sx={{ fontSize: '1rem'}} /> :
-                         activity.type === 'customer' ? <People sx={{ fontSize: '1rem'}} /> : <AttachMoney sx={{ fontSize: '1rem'}} />}
+                        {activity.type === 'order' ? <ShoppingCart sx={{ fontSize: '1rem' }} /> :
+                          activity.type === 'low_stock' ? <Inventory sx={{ fontSize: '1rem' }} /> :
+                            activity.type === 'customer' ? <People sx={{ fontSize: '1rem' }} /> : <AttachMoney sx={{ fontSize: '1rem' }} />}
                       </Avatar>
                       <Box sx={{ ml: 2, flex: 1 }}>
                         <Typography variant="body2" fontWeight={500}>
@@ -821,7 +821,7 @@ export default function Dashboard() {
                   topProducts.map((product, index) => {
                     const maxQty = topProducts[0]?.total_qty || 1
                     const progress = (product.total_qty / maxQty) * 100
-                    
+
                     return (
                       <Box key={product.product_id} sx={dashboardStyles.productItem}>
                         <Box sx={{ flex: 1 }}>
@@ -831,9 +831,9 @@ export default function Dashboard() {
                           <Typography variant="caption" color="text.secondary">
                             {product.total_qty} đã bán • {formatCurrency(product.total_revenue)}
                           </Typography>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={progress} 
+                          <LinearProgress
+                            variant="determinate"
+                            value={progress}
                             sx={{ mt: 1, height: 6, borderRadius: 3 }}
                           />
                         </Box>
@@ -853,9 +853,9 @@ export default function Dashboard() {
         </Grid>
       </Grid>
 
-      <LowStockAlert 
-        open={lowStockAlertOpen} 
-        onClose={() => setLowStockAlertOpen(false)} 
+      <LowStockAlert
+        open={lowStockAlertOpen}
+        onClose={() => setLowStockAlertOpen(false)}
       />
     </Box>
   )

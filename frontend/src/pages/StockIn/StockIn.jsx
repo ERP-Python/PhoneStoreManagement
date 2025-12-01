@@ -119,23 +119,23 @@ export default function StockIn() {
         // Tìm product trong danh sách để lấy giá
         const product = products.find(p => p.id === item.product_variant)
         const unit_cost = product?.price || item.price || ''
-        
+
         return {
           product_variant: item.product_variant,
           qty: item.suggested_qty,
           unit_cost: unit_cost
         }
       })
-      
+
       setFormData({
         source: 'MANUAL',
         reference_id: null,
         note: 'Nhập kho cho sản phẩm sắp hết hàng',
         items: items
       })
-      
+
       setFormOpen(true)
-      
+
       // Clear state after using
       window.history.replaceState({}, document.title)
     }
@@ -213,7 +213,7 @@ export default function StockIn() {
       if (selectedProduct && selectedProduct.price) {
         setFormData(prev => ({
           ...prev,
-          items: prev.items.map((item, i) => 
+          items: prev.items.map((item, i) =>
             i === index ? { ...item, product_variant: value, unit_cost: selectedProduct.price } : item
           )
         }))
@@ -224,7 +224,7 @@ export default function StockIn() {
 
     setFormData(prev => ({
       ...prev,
-      items: prev.items.map((item, i) => 
+      items: prev.items.map((item, i) =>
         i === index ? { ...item, [field]: processedValue } : item
       )
     }))
@@ -286,15 +286,15 @@ export default function StockIn() {
   return (
     <Box sx={stockInStyles.container}>
       <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
+        <Typography
+          variant="h5"
+          sx={{
             m: 0,
             fontSize: '1.25rem',
             fontWeight: 600,
             lineHeight: 1.4,
             fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-            color: '#1e293b' 
+            color: '#1e293b'
           }}
         >
           Nhập kho
@@ -311,7 +311,7 @@ export default function StockIn() {
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           size="small"
-          sx={{ 
+          sx={{
             flex: 1,
             minWidth: '200px',
             '& .MuiOutlinedInput-root': {
@@ -336,11 +336,11 @@ export default function StockIn() {
             ),
           }}
         />
-        
+
         <Button
           variant="contained"
           onClick={handleSearch}
-          sx={{ 
+          sx={{
             backgroundColor: '#667eea',
             color: '#fff',
             height: 40,
@@ -378,9 +378,9 @@ export default function StockIn() {
           Tạo phiếu nhập kho
         </Button>
 
-        <IconButton 
-          onClick={fetchStockIns} 
-          sx={{ 
+        <IconButton
+          onClick={fetchStockIns}
+          sx={{
             border: '1px solid #e2e8f0',
             borderRadius: 1,
             color: '#64748b',
@@ -397,75 +397,75 @@ export default function StockIn() {
         </IconButton>
       </Paper>
 
-        {error && (
-          <Alert severity="error" sx={stockInStyles.alert}>{error}</Alert>
-        )}
+      {error && (
+        <Alert severity="error" sx={stockInStyles.alert}>{error}</Alert>
+      )}
 
-        {loading ? (
-          <Box sx={stockInStyles.loadingContainer}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={stockInStyles.tableHeaderCell}>Mã phiếu</TableCell>
-                    <TableCell sx={stockInStyles.tableHeaderCell}>Nguồn</TableCell>
-                    <TableCell sx={stockInStyles.tableHeaderCell}>Người tạo</TableCell>
-                    <TableCell sx={stockInStyles.tableHeaderCell}>Ngày tạo</TableCell>
-                    <TableCell sx={stockInStyles.tableHeaderCell} align="right">Thao tác</TableCell>
+      {loading ? (
+        <Box sx={stockInStyles.loadingContainer}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={stockInStyles.tableHeaderCell}>Mã phiếu</TableCell>
+                  <TableCell sx={stockInStyles.tableHeaderCell}>Nguồn</TableCell>
+                  <TableCell sx={stockInStyles.tableHeaderCell}>Người tạo</TableCell>
+                  <TableCell sx={stockInStyles.tableHeaderCell}>Ngày tạo</TableCell>
+                  <TableCell sx={stockInStyles.tableHeaderCell} align="right">Thao tác</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {stockIns.map((stockIn) => (
+                  <TableRow key={stockIn.id} hover>
+                    <TableCell sx={stockInStyles.tableCell}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, color: '#667eea' }}>
+                        {stockIn.code}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={stockInStyles.tableCell}>
+                      <Chip
+                        label={stockIn.source === 'PO' ? 'Từ PO' : 'Thủ công'}
+                        size="small"
+                        color={stockIn.source === 'PO' ? 'primary' : 'default'}
+                      />
+                    </TableCell>
+                    <TableCell sx={stockInStyles.tableCell}>
+                      {stockIn.created_by_name}
+                    </TableCell>
+                    <TableCell sx={stockInStyles.tableCell}>
+                      {new Date(stockIn.created_at).toLocaleDateString('vi-VN')}
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        onClick={() => handleViewDetail(stockIn)}
+                        size="small"
+                        sx={stockInStyles.actionButton}
+                      >
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {stockIns.map((stockIn) => (
-                    <TableRow key={stockIn.id} hover>
-                      <TableCell sx={stockInStyles.tableCell}>
-                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#667eea' }}>
-                          {stockIn.code}
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={stockInStyles.tableCell}>
-                        <Chip
-                          label={stockIn.source === 'PO' ? 'Từ PO' : 'Thủ công'}
-                          size="small"
-                          color={stockIn.source === 'PO' ? 'primary' : 'default'}
-                        />
-                      </TableCell>
-                      <TableCell sx={stockInStyles.tableCell}>
-                        {stockIn.created_by_name}
-                      </TableCell>
-                      <TableCell sx={stockInStyles.tableCell}>
-                        {new Date(stockIn.created_at).toLocaleDateString('vi-VN')}
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          onClick={() => handleViewDetail(stockIn)}
-                          size="small"
-                          sx={stockInStyles.actionButton}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-            <TablePagination
-              component="div"
-              count={totalCount}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage="Số hàng mỗi trang:"
-              sx={stockInStyles.pagination}
-            />
-          </>
-        )}
+          <TablePagination
+            component="div"
+            count={totalCount}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Số hàng mỗi trang:"
+            sx={stockInStyles.pagination}
+          />
+        </>
+      )}
 
 
       {/* Create Form Dialog */}
