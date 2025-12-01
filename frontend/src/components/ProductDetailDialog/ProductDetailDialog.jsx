@@ -27,6 +27,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
     const [selectedRom, setSelectedRom] = useState(null)
     const [selectedColor, setSelectedColor] = useState(null)
     const [currentVariant, setCurrentVariant] = useState(null)
+    const [thumbnailStartIndex, setThumbnailStartIndex] = useState(0)
 
     const fetchProductDetail = async () => {
         if (!initialProduct) return
@@ -112,6 +113,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
 
     const handleClose = () => {
         setCurrentImageIndex(0)
+        setThumbnailStartIndex(0)
         setSelectedRom(null)
         setSelectedColor(null)
         setCurrentVariant(null)
@@ -128,7 +130,8 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
             PaperProps={{
                 sx: {
                     borderRadius: 2,
-                    maxHeight: '90vh'
+                    maxHeight: '90vh',
+                    maxWidth: '1000px'
                 }
             }}
         >
@@ -139,7 +142,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                 borderBottom: '1px solid #e2e8f0',
                 pb: 2
             }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: 20, color: '#1e293b' }}>
                     Chi tiết sản phẩm
                 </Typography>
                 <IconButton onClick={handleClose} size="small">
@@ -147,13 +150,13 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                 </IconButton>
             </DialogTitle>
 
-            <DialogContent sx={{ p: 3, pt: 4 }}>
+            <DialogContent sx={{ p: 4, mt: 2, pl: 7 }}>
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
                         <CircularProgress />
                     </Box>
                 ) : product ? (
-                    <Grid container spacing={3}>
+                    <Grid container spacing={7}>
                         {/* Left side - Images */}
                         <Grid item xs={12} md={5}>
                             <Box sx={{ position: 'relative' }}>
@@ -164,7 +167,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                             src={images[currentImageIndex]?.image || '/assets/images/1.jpg'}
                                             alt={product.name}
                                             sx={{
-                                                width: '100%',
+                                                width: "100%",
                                                 height: 400,
                                                 objectFit: 'contain',
                                                 backgroundColor: '#fff'
@@ -176,8 +179,8 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                                     onClick={handlePrevImage}
                                                     sx={{
                                                         position: 'absolute',
-                                                        left: -20,
-                                                        top: '50%',
+                                                        left: -40,
+                                                        top: '45%',
                                                         transform: 'translateY(-50%)',
                                                         backgroundColor: '#9ca3af',
                                                         color: '#fff',
@@ -193,8 +196,8 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                                     onClick={handleNextImage}
                                                     sx={{
                                                         position: 'absolute',
-                                                        right: -20,
-                                                        top: '50%',
+                                                        right: -40,
+                                                        top: '45%',
                                                         transform: 'translateY(-50%)',
                                                         backgroundColor: '#9ca3af',
                                                         color: '#fff',
@@ -228,68 +231,66 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
 
                                 {/* Thumbnail images */}
                                 {images.length > 0 && (
-                                    <Box sx={{ position: 'relative', mt: 2 }}>
+                                    <Box sx={{ position: 'relative', mt: 2, ml: -1, mr: -1 }}>
                                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'nowrap', justifyContent: 'center', overflow: 'hidden' }}>
-                                            {images.map((img, index) => (
+                                            {images.slice(thumbnailStartIndex, thumbnailStartIndex + 4).map((img, index) => {
+                                                const actualIndex = thumbnailStartIndex + index
+                                                return (
+                                                    <Box
+                                                        key={img.id}
+                                                        component="img"
+                                                        src={img.image}
+                                                        alt={`${product.name} ${actualIndex + 1}`}
+                                                        onClick={() => setCurrentImageIndex(actualIndex)}
+                                                        sx={{
+                                                            width: 60,
+                                                            height: 60,
+                                                            objectFit: 'cover',
+                                                            borderRadius: 1,
+                                                            border: currentImageIndex === actualIndex ? '2px solid #667eea' : '1px solid #e2e8f0',
+                                                            cursor: 'pointer',
+                                                            flexShrink: 0,
+                                                            '&:hover': {
+                                                                borderColor: '#667eea'
+                                                            }
+                                                        }}
+                                                    />
+                                                )
+                                            })}
+                                            {images.length > thumbnailStartIndex + 4 && (
                                                 <Box
-                                                    key={img.id}
-                                                    component="img"
-                                                    src={img.image}
-                                                    alt={`${product.name} ${index + 1}`}
-                                                    onClick={() => setCurrentImageIndex(index)}
+                                                    onClick={() => {
+                                                        const nextStart = thumbnailStartIndex + 4
+                                                        if (nextStart >= images.length) {
+                                                            setThumbnailStartIndex(0)
+                                                        } else {
+                                                            setThumbnailStartIndex(nextStart)
+                                                        }
+                                                    }}
                                                     sx={{
                                                         width: 60,
                                                         height: 60,
-                                                        objectFit: 'cover',
                                                         borderRadius: 1,
-                                                        border: currentImageIndex === index ? '2px solid #667eea' : '1px solid #e2e8f0',
+                                                        border: '1px solid #e2e8f0',
                                                         cursor: 'pointer',
                                                         flexShrink: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        backgroundColor: '#f8f9fa',
+                                                        fontWeight: 600,
+                                                        color: '#667eea',
+                                                        fontSize: 14,
                                                         '&:hover': {
-                                                            borderColor: '#667eea'
+                                                            borderColor: '#667eea',
+                                                            backgroundColor: '#e7e9fc'
                                                         }
                                                     }}
-                                                />
-                                            ))}
+                                                >
+                                                    +{images.length - thumbnailStartIndex - 4}
+                                                </Box>
+                                            )}
                                         </Box>
-                                        {images.length > 4 && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        left: -16,
-                                                        top: '50%',
-                                                        transform: 'translateY(-50%)',
-                                                        backgroundColor: '#9ca3af',
-                                                        color: '#fff',
-                                                        width: 32,
-                                                        height: 32,
-                                                        border: '2px solid #9ca3af',
-                                                        '&:hover': { backgroundColor: '#6b7280', borderColor: '#6b7280' }
-                                                    }}
-                                                >
-                                                    <NavigateBefore sx={{ fontSize: 20, color: '#fff' }} />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        right: -16,
-                                                        top: '50%',
-                                                        transform: 'translateY(-50%)',
-                                                        backgroundColor: '#9ca3af',
-                                                        color: '#fff',
-                                                        width: 32,
-                                                        height: 32,
-                                                        border: '2px solid #9ca3af',
-                                                        '&:hover': { backgroundColor: '#6b7280', borderColor: '#6b7280' }
-                                                    }}
-                                                >
-                                                    <NavigateNext sx={{ fontSize: 20, color: '#fff' }} />
-                                                </IconButton>
-                                            </>
-                                        )}
                                     </Box>
                                 )}
                             </Box>
