@@ -426,6 +426,79 @@ def daily_revenue_chart(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def monthly_revenue_chart(request):
+    """
+    Monthly revenue chart data for last N months
+    Query params: months (default 12)
+    """
+    from apps.reports.models import RevenueStats
+    from datetime import date
+    
+    months = int(request.query_params.get('months', 12))
+    today = date.today()
+    
+    # Get revenue stats for the last N months
+    chart_data = []
+    
+    for i in range(months - 1, -1, -1):
+        # Calculate target month
+        current_month = today.month - i
+        current_year = today.year
+        
+        # Handle year boundary
+        if current_month <= 0:
+            current_year -= 1
+            current_month += 12
+        
+        # Get first day and last day of the month
+        month_start = date(current_year, current_month, 1)
+        
+        # Get last day of month
+        if current_month == 12:
+            next_month_start = date(current_year + 1, 1, 1)
+        else:
+            next_month_start = date(current_year, current_month + 1, 1)
+        month_end = next_month_start - timedelta(days=1)
+        
+        # Calculate revenue for the month
+        month_start_dt = timezone.datetime.combine(month_start, timezone.datetime.min.time())
+        month_end_dt = timezone.datetime.combine(month_end, timezone.datetime.max.time())
+        
+        if timezone.is_aware(month_start_dt):
+            month_start_dt = timezone.make_aware(month_start_dt)
+            month_end_dt = timezone.make_aware(month_end_dt)
+        
+        month_orders = Order.objects.filter(
+            created_at__gte=month_start_dt,
+            created_at__lte=month_end_dt,
+            status='paid'
+        )
+        revenue = float(month_orders.aggregate(total=Sum('total'))['total'] or 0)
+        orders_count = month_orders.count()
+        
+        # Format month name in Vietnamese
+        month_names = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+                       'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
+        month_name = month_names[current_month - 1]
+        
+        chart_data.append({
+            'date': str(month_start),
+            'name': month_name,
+            'doanhthu': revenue,
+            'orders': orders_count,
+            'formatted_date': month_start.strftime('%m/%Y')
+        })
+    
+    return Response({
+        'months': months,
+        'data': chart_data,
+        'total_revenue': sum(item['doanhthu'] for item in chart_data),
+        'total_orders': sum(item['orders'] for item in chart_data)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def daily_stats(request):
     """
     Daily statistics for today
@@ -520,3 +593,91 @@ def yearly_stats(request):
         'previous_year_revenue': float(previous_revenue),
         'previous_year_orders_count': previous_count
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recent_activities(request):
+    """
+    Get recent activities (orders, low stock warnings, customer registrations)
+    Query params: limit (default 10)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    limit = int(request.query_params.get('limit', 10))
+    now = timezone.now()
+    activities = []
+    
+    # Recent paid orders (last 7 days)
+    recent_orders = Order.objects.filter(
+        status='paid',
+        created_at__gte=now - timedelta(days=7)
+    ).order_by('-created_at')[:10]
+    
+    for order in recent_orders:
+        # Calculate time difference
+        time_diff = now - order.created_at
+        if time_diff.total_seconds() < 60:
+            time_str = 'Vừa xong'
+        elif time_diff.total_seconds() < 3600:
+            mins = int(time_diff.total_seconds() / 60)
+            time_str = f'{mins} phút trước'
+        elif time_diff.total_seconds() < 86400:
+            hours = int(time_diff.total_seconds() / 3600)
+            time_str = f'{hours} giờ trước'
+        else:
+            days = int(time_diff.total_seconds() / 86400)
+            time_str = f'{days} ngày trước'
+        
+        activities.append({
+            'action': f'Đơn hàng #{order.id} được thanh toán',
+            'time': time_str,
+            'type': 'order',
+            'timestamp': order.created_at
+        })
+    
+    # Low stock products (quantity < 10)
+    low_stock = Inventory.objects.filter(quantity__lt=10).select_related('product')[:10]
+    for inventory in low_stock:
+        activities.append({
+            'action': f'Sản phẩm "{inventory.product.name}" sắp hết hàng ({inventory.quantity} cái)',
+            'time': 'Đang theo dõi',
+            'type': 'low_stock',
+            'timestamp': inventory.updated_at if hasattr(inventory, 'updated_at') else now
+        })
+    
+    # Recent new customers (last 7 days)
+    new_customers = Customer.objects.filter(
+        created_at__gte=now - timedelta(days=7)
+    ).order_by('-created_at')[:10]
+    
+    for customer in new_customers:
+        time_diff = now - customer.created_at
+        if time_diff.total_seconds() < 60:
+            time_str = 'Vừa xong'
+        elif time_diff.total_seconds() < 3600:
+            mins = int(time_diff.total_seconds() / 60)
+            time_str = f'{mins} phút trước'
+        elif time_diff.total_seconds() < 86400:
+            hours = int(time_diff.total_seconds() / 3600)
+            time_str = f'{hours} giờ trước'
+        else:
+            days = int(time_diff.total_seconds() / 86400)
+            time_str = f'{days} ngày trước'
+        
+        activities.append({
+            'action': f'Khách hàng mới: {customer.name}',
+            'time': time_str,
+            'type': 'customer',
+            'timestamp': customer.created_at
+        })
+    
+    # Sort by timestamp (newest first) and limit
+    activities = sorted(activities, key=lambda x: x['timestamp'], reverse=True)[:limit]
+    
+    # Remove timestamp from response
+    for activity in activities:
+        del activity['timestamp']
+    
+    return Response(activities)
