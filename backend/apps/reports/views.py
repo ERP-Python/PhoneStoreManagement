@@ -638,13 +638,13 @@ def recent_activities(request):
         })
     
     # Low stock products (quantity < 10)
-    low_stock = Inventory.objects.filter(quantity__lt=10).select_related('product')[:10]
+    low_stock = Inventory.objects.filter(on_hand__lt=10).select_related('product_variant__product')[:10]
     for inventory in low_stock:
         activities.append({
-            'action': f'Sản phẩm "{inventory.product.name}" sắp hết hàng ({inventory.quantity} cái)',
+            'action': f'Sản phẩm "{inventory.product_variant.product.name}" sắp hết hàng ({inventory.on_hand} cái)',
             'time': 'Đang theo dõi',
             'type': 'low_stock',
-            'timestamp': inventory.updated_at if hasattr(inventory, 'updated_at') else now
+            'timestamp': inventory.updated_at
         })
     
     # Recent new customers (last 7 days)
