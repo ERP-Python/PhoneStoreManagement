@@ -426,6 +426,79 @@ def daily_revenue_chart(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def monthly_revenue_chart(request):
+    """
+    Monthly revenue chart data for last N months
+    Query params: months (default 12)
+    """
+    from apps.reports.models import RevenueStats
+    from datetime import date
+    
+    months = int(request.query_params.get('months', 12))
+    today = date.today()
+    
+    # Get revenue stats for the last N months
+    chart_data = []
+    
+    for i in range(months - 1, -1, -1):
+        # Calculate target month
+        current_month = today.month - i
+        current_year = today.year
+        
+        # Handle year boundary
+        if current_month <= 0:
+            current_year -= 1
+            current_month += 12
+        
+        # Get first day and last day of the month
+        month_start = date(current_year, current_month, 1)
+        
+        # Get last day of month
+        if current_month == 12:
+            next_month_start = date(current_year + 1, 1, 1)
+        else:
+            next_month_start = date(current_year, current_month + 1, 1)
+        month_end = next_month_start - timedelta(days=1)
+        
+        # Calculate revenue for the month
+        month_start_dt = timezone.datetime.combine(month_start, timezone.datetime.min.time())
+        month_end_dt = timezone.datetime.combine(month_end, timezone.datetime.max.time())
+        
+        if timezone.is_aware(month_start_dt):
+            month_start_dt = timezone.make_aware(month_start_dt)
+            month_end_dt = timezone.make_aware(month_end_dt)
+        
+        month_orders = Order.objects.filter(
+            created_at__gte=month_start_dt,
+            created_at__lte=month_end_dt,
+            status='paid'
+        )
+        revenue = float(month_orders.aggregate(total=Sum('total'))['total'] or 0)
+        orders_count = month_orders.count()
+        
+        # Format month name in Vietnamese
+        month_names = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+                       'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
+        month_name = month_names[current_month - 1]
+        
+        chart_data.append({
+            'date': str(month_start),
+            'name': month_name,
+            'doanhthu': revenue,
+            'orders': orders_count,
+            'formatted_date': month_start.strftime('%m/%Y')
+        })
+    
+    return Response({
+        'months': months,
+        'data': chart_data,
+        'total_revenue': sum(item['doanhthu'] for item in chart_data),
+        'total_orders': sum(item['orders'] for item in chart_data)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def daily_stats(request):
     """
     Daily statistics for today

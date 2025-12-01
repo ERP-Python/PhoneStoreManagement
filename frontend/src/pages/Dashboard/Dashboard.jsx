@@ -201,6 +201,7 @@ export default function Dashboard() {
   const [dailyStats, setDailyStats] = useState(null)
   const [monthlyStats, setMonthlyStats] = useState(null)
   const [yearlyStats, setYearlyStats] = useState(null)
+  const [chartPeriod, setChartPeriod] = useState('7days') // Thêm state cho biểu đồ
   const navigate = useNavigate()
 
   // --- Handlers ---
@@ -232,6 +233,15 @@ export default function Dashboard() {
       fetchYearlyStats()
     }
   }, [viewType])
+
+  // Refetch chart data khi chartPeriod thay đổi
+  useEffect(() => {
+    if (chartPeriod === '7days') {
+      fetchSalesChart()
+    } else if (chartPeriod === '12months') {
+      fetchMonthlySalesChart()
+    }
+  }, [chartPeriod])
 
   const fetchStats = async () => {
     try {
@@ -278,6 +288,16 @@ export default function Dashboard() {
       setSalesData(response.data.data || [])
     } catch (error) {
       console.error('Error fetching sales chart:', error)
+      setSalesData([])
+    }
+  }
+
+  const fetchMonthlySalesChart = async () => {
+    try {
+      const response = await api.get('/reports/monthly-revenue/', { params: { months: 12 } })
+      setSalesData(response.data.data || [])
+    } catch (error) {
+      console.error('Error fetching monthly sales chart:', error)
       setSalesData([])
     }
   }
@@ -499,9 +519,44 @@ export default function Dashboard() {
         <Grid item xs={12} lg={8}>
           <Card sx={dashboardStyles.chartCard} elevation={0}>
             <CardContent>
-              <Typography variant="h6" sx={dashboardStyles.chartTitle}>
-                Doanh thu 7 ngày qua
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={dashboardStyles.chartTitle}>
+                  Doanh thu
+                </Typography>
+                <ToggleButtonGroup
+                  value={chartPeriod}
+                  exclusive
+                  onChange={(event, newPeriod) => {
+                    if (newPeriod !== null) {
+                      setChartPeriod(newPeriod);
+                    }
+                  }}
+                  aria-label="chart period"
+                  size="small"
+                  sx={{ 
+                    backgroundColor: '#f5f5f5',
+                    '& .MuiToggleButton-root': {
+                      border: '1px solid #e2e8f0',
+                      px: 1.5,
+                      py: 0.4,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      color: '#64748b',
+                      fontSize: '0.85rem',
+                      '&.Mui-selected': {
+                        backgroundColor: '#667eea',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: '#5a67d8',
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <ToggleButton value="7days">7 ngày qua</ToggleButton>
+                  <ToggleButton value="12months">12 tháng qua</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
               <Box sx={{ mt: 3, height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={salesData.length ? salesData : mockSalesData}>
