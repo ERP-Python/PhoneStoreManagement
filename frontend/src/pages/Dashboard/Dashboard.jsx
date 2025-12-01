@@ -16,7 +16,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Stack,
-  IconButton
+  IconButton,
+  Badge
 } from '@mui/material'
 import {
   TrendingUp,
@@ -25,7 +26,8 @@ import {
   People,
   AttachMoney,
   TrendingDown,
-  Refresh
+  Refresh,
+  NotificationsActive
 } from '@mui/icons-material'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import api from '../../api/axios'
@@ -66,6 +68,48 @@ const styles = {
     width: 42,
     height: 42, 
     borderRadius: 2
+  },
+  notificationCard: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    borderRadius: 3,
+    boxShadow: '0px 4px 20px rgba(102, 126, 234, 0.15)',
+    position: 'relative',
+    overflow: 'hidden',
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: '0px 8px 30px rgba(102, 126, 234, 0.25)',
+    },
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: '120px',
+      height: '120px',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: '50%',
+      transform: 'translate(40px, -40px)',
+      zIndex: 0
+    }
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ff3b30',
+    color: 'white',
+    borderRadius: '50%',
+    width: 32,
+    height: 32,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '700',
+    fontSize: '0.75rem',
+    border: '3px solid white',
+    boxShadow: '0px 2px 8px rgba(255, 59, 48, 0.3)'
   }
 }
 
@@ -720,9 +764,12 @@ export default function Dashboard() {
         <Grid item xs={12} md={6}>
           <Card sx={dashboardStyles.activityCard} elevation={0}>
             <CardContent>
-              <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center' }}>
-                Hoạt động gần đây
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+                <NotificationsActive sx={{ fontSize: '1.8rem', color: '#667eea', mr: 1 }} />
+                <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center', m: 0 }}>
+                  Hoạt động gần đây
+                </Typography>
+              </Box>
               <Box sx={{ mt: 2 }}>
                 {activities.length > 0 ? (
                   activities.map((activity, index) => (
@@ -763,9 +810,12 @@ export default function Dashboard() {
         <Grid item xs={12} md={6}>
           <Card sx={dashboardStyles.activityCard} elevation={0}>
             <CardContent>
-              <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center' }}>
-                Sản phẩm bán chạy
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+                <TrendingUp sx={{ fontSize: '1.8rem', color: '#667eea', mr: 1 }} />
+                <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center', m: 0 }}>
+                  Sản phẩm bán chạy
+                </Typography>
+              </Box>
               <Box sx={{ mt: 2 }}>
                 {topProducts.length > 0 ? (
                   topProducts.map((product, index) => {
