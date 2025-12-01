@@ -9,6 +9,7 @@ from .serializers import (
     BrandSerializer, ProductSerializer, ProductVariantSerializer,
     ProductImageSerializer, ImeiSerializer
 )
+from config.pagination import StandardResultsSetPagination
 
 
 class BrandViewSet(viewsets.ModelViewSet):
@@ -39,6 +40,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().select_related('brand').prefetch_related('variants', 'images')
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'sku', 'barcode']
     ordering_fields = ['name', 'created_at', 'sku']
