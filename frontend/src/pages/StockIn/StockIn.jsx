@@ -58,9 +58,39 @@ export default function StockIn() {
   const [formData, setFormData] = useState({
     source: 'MANUAL',
     reference_id: null,
+    supplier_id: '',
     note: '',
     items: [{ product_variant: '', qty: 1, unit_cost: '' }]
   })
+
+  // State to store mapping between stockIn id/code and supplier
+  const [stockInSuppliers, setStockInSuppliers] = useState({})
+
+  // Fake supplier data
+  const fakeSuppliers = [
+    { id: 1, name: 'Bách Khoa Phân Phối' },
+    { id: 2, name: 'CellphoneS' },
+    { id: 3, name: 'Di Động Việt' },
+    { id: 4, name: 'FPT Shop' },
+    { id: 5, name: 'Minh Tuấn Mobile' },
+    { id: 6, name: 'Nhập Khẩu Quốc Tế' },
+    { id: 7, name: 'ShopDunk' },
+    { id: 8, name: 'Thế Giới Di Động' },
+    { id: 9, name: 'TopZone' },
+    { id: 10, name: 'Viettel Store' },
+  ]
+
+  // Function to get supplier name by stockIn id
+  const getSupplierName = (stockInId) => {
+    // First check if we have stored supplier for this stockIn
+    if (stockInSuppliers[stockInId]) {
+      const supplier = fakeSuppliers.find(s => s.id === stockInSuppliers[stockInId])
+      return supplier ? supplier.name : fakeSuppliers[stockInId % fakeSuppliers.length].name
+    }
+    // Fallback: use id to get a consistent supplier
+    const index = stockInId % fakeSuppliers.length
+    return fakeSuppliers[index].name
+  }
 
   const fetchStockIns = async () => {
     try {
@@ -130,6 +160,7 @@ export default function StockIn() {
       setFormData({
         source: 'MANUAL',
         reference_id: null,
+        supplier_id: '',
         note: 'Nhập kho cho sản phẩm sắp hết hàng',
         items: items
       })
@@ -163,6 +194,7 @@ export default function StockIn() {
     setFormData({
       source: 'MANUAL',
       reference_id: null,
+      supplier_id: '',
       note: '',
       items: [{ product_variant: '', qty: 1, unit_cost: '' }]
     })
@@ -264,14 +296,29 @@ export default function StockIn() {
       }
 
       console.log('Submitting stock in data:', cleanedData)
-      await api.post('/stock-in/', cleanedData)
+      const response = await api.post('/stock-in/', cleanedData)
+      
+      // Save supplier mapping for the new stockIn
+      const newStockIn = response.data
+      if (newStockIn && newStockIn.id && formData.supplier_id) {
+        setStockInSuppliers(prev => ({
+          ...prev,
+          [newStockIn.id]: formData.supplier_id
+        }))
+        // Add new stockIn to top of list immediately
+        setStockIns(prev => [newStockIn, ...prev])
+        setTotalCount(prev => prev + 1)
+      } else {
+        // Fallback: refetch the list
+        fetchStockIns()
+      }
+      
       setNotification({
         open: true,
         message: 'Tạo phiếu nhập kho thành công',
         severity: 'success'
       })
       setFormOpen(false)
-      fetchStockIns()
     } catch (err) {
       console.error('Error creating stock in:', err)
       console.error('Error response:', err.response?.data)
@@ -412,7 +459,7 @@ export default function StockIn() {
               <TableHead>
                 <TableRow>
                   <TableCell sx={stockInStyles.tableHeaderCell}>Mã phiếu</TableCell>
-                  <TableCell sx={stockInStyles.tableHeaderCell}>Nguồn</TableCell>
+                  <TableCell sx={stockInStyles.tableHeaderCell}>Nhà cung cấp</TableCell>
                   <TableCell sx={stockInStyles.tableHeaderCell}>Người tạo</TableCell>
                   <TableCell sx={stockInStyles.tableHeaderCell}>Ngày tạo</TableCell>
                   <TableCell sx={stockInStyles.tableHeaderCell} align="right">Thao tác</TableCell>
@@ -427,11 +474,9 @@ export default function StockIn() {
                       </Typography>
                     </TableCell>
                     <TableCell sx={stockInStyles.tableCell}>
-                      <Chip
-                        label={stockIn.source === 'PO' ? 'Từ PO' : 'Thủ công'}
-                        size="small"
-                        color={stockIn.source === 'PO' ? 'primary' : 'default'}
-                      />
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#334155' }}>
+                        {getSupplierName(stockIn.id)}
+                      </Typography>
                     </TableCell>
                     <TableCell sx={stockInStyles.tableCell}>
                       {stockIn.created_by_name}
@@ -473,6 +518,22 @@ export default function StockIn() {
         <DialogTitle>Tạo phiếu nhập kho mới</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Nhà cung cấp</InputLabel>
+                <Select
+                  value={formData.supplier_id}
+                  onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
+                  label="Nhà cung cấp"
+                >
+                  {fakeSuppliers.map((supplier) => (
+                    <SelectMenuItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </SelectMenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Nguồn nhập</InputLabel>
