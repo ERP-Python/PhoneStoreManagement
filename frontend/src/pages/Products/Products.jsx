@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material'
 import api from '../../api/axios'
 import ProductForm from '../../components/ProductForm/ProductForm'
+import ProductDetailDialog from '../../components/ProductDetailDialog/ProductDetailDialog'
 import Notification from '../../components/Notification/Notification'
 import { productsStyles } from './Products.styles'
 
@@ -48,6 +49,8 @@ export default function Products() {
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' })
   const [brands, setBrands] = useState([])
   const [brandFilter, setBrandFilter] = useState('')
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [selectedProductDetail, setSelectedProductDetail] = useState(null)
 
   const fetchProducts = async () => {
     try {
@@ -151,6 +154,16 @@ export default function Products() {
     setNotification({ open: true, message: message || 'Lưu sản phẩm thành công!', severity: 'success' })
   }
 
+  const handleViewDetail = (product) => {
+    setSelectedProductDetail(product)
+    setDetailDialogOpen(true)
+  }
+
+  const handleDetailDialogClose = () => {
+    setDetailDialogOpen(false)
+    setSelectedProductDetail(null)
+  }
+
   if (loading && products.length === 0) {
     return (
       <Box sx={productsStyles.loadingContainer}>
@@ -162,15 +175,15 @@ export default function Products() {
   return (
     <Box>
       <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
+        <Typography
+          variant="h5"
+          sx={{
             m: 0,
             fontSize: '1.25rem',
             fontWeight: 600,
             lineHeight: 1.4,
             fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-            color: '#1e293b' 
+            color: '#1e293b'
           }}
         >
           Quản lý Sản phẩm
@@ -193,7 +206,7 @@ export default function Products() {
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={handleSearchKeyPress}
           size="small"
-          sx={{ 
+          sx={{
             flex: 1,
             minWidth: '200px',
             '& .MuiOutlinedInput-root': {
@@ -253,11 +266,11 @@ export default function Products() {
             ))}
           </Select>
         </FormControl>
-        
+
         <Button
           variant="contained"
           onClick={handleSearch}
-          sx={{ 
+          sx={{
             backgroundColor: '#667eea',
             color: '#fff',
             height: 40,
@@ -295,9 +308,9 @@ export default function Products() {
           Thêm sản phẩm
         </Button>
 
-        <IconButton 
-          onClick={fetchProducts} 
-          sx={{ 
+        <IconButton
+          onClick={fetchProducts}
+          sx={{
             border: '1px solid #e2e8f0',
             borderRadius: 1,
             color: '#64748b',
@@ -355,7 +368,22 @@ export default function Products() {
                     />
                   </TableCell>
                   <TableCell>{product.sku}</TableCell>
-                  <TableCell>{product.name}</TableCell>
+                  <TableCell>
+                    <Typography
+                      sx={{
+                        cursor: 'pointer',
+                        color: '#667eea',
+                        fontWeight: 500,
+                        '&:hover': {
+                          textDecoration: 'underline',
+                          color: '#5a67d8'
+                        }
+                      }}
+                      onClick={() => handleViewDetail(product)}
+                    >
+                      {product.name}
+                    </Typography>
+                  </TableCell>
                   <TableCell>{product.brand?.name || product.brand_name || '-'}</TableCell>
                   <TableCell>
                     <Typography {...productsStyles.priceText}>
@@ -415,6 +443,12 @@ export default function Products() {
         onClose={handleFormClose}
         product={selectedProduct}
         onSuccess={handleFormSuccess}
+      />
+
+      <ProductDetailDialog
+        open={detailDialogOpen}
+        onClose={handleDetailDialogClose}
+        product={selectedProductDetail}
       />
 
       <Notification
