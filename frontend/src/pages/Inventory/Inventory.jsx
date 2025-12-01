@@ -133,18 +133,23 @@ export default function Inventory() {
 
   return (
     <Box>
-      <Box sx={inventoryStyles.header}>
-        <Typography variant="h4">
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            m: 0,
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            lineHeight: 1.4,
+            fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            color: '#1e293b' 
+          }}
+        >
           Quản lý Tồn kho
         </Typography>
-        <Box sx={inventoryStyles.headerActions}>
-          <Chip 
-            icon={<WarningIcon />} 
-            label={`${lowStockCount} sản phẩm sắp hết`}
-            color="warning"
-            {...inventoryStyles.warningChip}
-          />
-        </Box>
+        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+          Theo dõi số lượng tồn kho và trạng thái sản phẩm
+        </Typography>
       </Box>
 
       {error && (
@@ -153,37 +158,87 @@ export default function Inventory() {
         </Alert>
       )}
 
-      <Paper sx={inventoryStyles.searchPaper}>
-        <Box sx={inventoryStyles.searchBox}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Tìm kiếm theo tên sản phẩm, SKU..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={handleSearchKeyPress}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Button
-            variant="contained"
-            onClick={handleSearch}
-            startIcon={<SearchIcon />}
-          >
-            Tìm
-          </Button>
-          <IconButton onClick={fetchInventory} color="primary">
-            <RefreshIcon />
-          </IconButton>
-        </Box>
+      <Paper elevation={0} sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2, borderRadius: 2, border: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+        <TextField
+          placeholder="Tìm kiếm theo tên sản phẩm, SKU..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={handleSearchKeyPress}
+          size="small"
+          sx={{ 
+            flex: 1,
+            minWidth: '200px',
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              '& fieldset': {
+                borderColor: '#e2e8f0',
+              },
+              '&:hover fieldset': {
+                borderColor: '#cbd5e1',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#667eea',
+              }
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: '#94a3b8' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+        
+        <Chip 
+          icon={<WarningIcon />} 
+          label={`${lowStockCount} sản phẩm sắp hết`}
+          color="warning"
+          variant="outlined"
+          sx={{ borderRadius: 1, height: 40 }}
+        />
+
+        <Button
+          variant="contained"
+          onClick={handleSearch}
+          sx={{ 
+            backgroundColor: '#667eea',
+            color: '#fff',
+            height: 40,
+            px: 3,
+            borderRadius: 1,
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#5a67d8',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }
+          }}
+        >
+          Tìm
+        </Button>
+
+        <IconButton 
+          onClick={fetchInventory} 
+          sx={{ 
+            border: '1px solid #e2e8f0',
+            borderRadius: 1,
+            color: '#64748b',
+            height: 40,
+            width: 40,
+            '&:hover': {
+              backgroundColor: '#f8f9fa',
+              color: '#667eea',
+              borderColor: '#667eea'
+            }
+          }}
+        >
+          <RefreshIcon />
+        </IconButton>
       </Paper>
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
         <Table>
           <TableHead>
             <TableRow>
