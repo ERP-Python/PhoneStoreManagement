@@ -25,6 +25,14 @@ class BrandViewSet(viewsets.ModelViewSet):
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
         return queryset
+    
+    def perform_create(self, serializer):
+        """Handle brand creation with logo upload"""
+        serializer.save()
+    
+    def perform_update(self, serializer):
+        """Handle brand update with logo upload"""
+        serializer.save()
 
 
 class ProductViewSet(viewsets.ModelViewSet):

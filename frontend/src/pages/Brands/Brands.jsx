@@ -155,18 +155,14 @@ export default function Brands() {
       }
 
       if (selectedBrand) {
-        await api.patch(`/brands/${selectedBrand.id}/`, formDataToSend, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.patch(`/brands/${selectedBrand.id}/`, formDataToSend)
         setNotification({
           open: true,
           message: 'Cập nhật thương hiệu thành công',
           severity: 'success'
         })
       } else {
-        await api.post('/brands/', formDataToSend, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.post('/brands/', formDataToSend)
         setNotification({
           open: true,
           message: 'Thêm thương hiệu thành công',
