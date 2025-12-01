@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     sales_report, inventory_report, top_products,
     dashboard_stats, stock_movements_report, daily_revenue_chart, monthly_revenue_chart,
-    daily_stats, monthly_stats, yearly_stats
+    daily_stats, monthly_stats, yearly_stats, recent_activities
 )
 
 urlpatterns = [
@@ -16,4 +16,5 @@ urlpatterns = [
     path('daily-stats/', daily_stats, name='daily-stats'),
     path('monthly-stats/', monthly_stats, name='monthly-stats'),
     path('yearly-stats/', yearly_stats, name='yearly-stats'),
+    path('recent-activities/', recent_activities, name='recent-activities'),
 ] 

@@ -62,7 +62,6 @@ const styles = {
     boxShadow: '0px 2px 10px rgba(0,0,0,0.03)',
     height: '100%'
   },
-  // Đã sửa: Giảm kích thước icon avatar để gọn hơn
   iconAvatar: {
     width: 42,
     height: 42, 
@@ -70,7 +69,6 @@ const styles = {
   }
 }
 
-// Legacy dashboardStyles - compatibility
 const dashboardStyles = {
   loadingContainer: {
     display: 'flex',
@@ -115,7 +113,6 @@ const dashboardStyles = {
   }
 }
 
-// --- Component StatCard đã được FIX ---
 function StatCard({ title, value, icon, color = 'primary', change, changeType, changeDescription, onClick }) {
   const bgColors = {
     primary: '#e3f2fd',
@@ -143,7 +140,7 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
       {/* Đã sửa: Giảm padding mặc định của CardContent (p: 2) và padding dưới cùng */}
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box>
+          <Box sx={{ flex: 1, textAlign: 'center' }}>
             {/* Đã sửa: Giảm margin bottom xuống 0.5 để sát với số tiền */}
             <Typography color="text.secondary" variant="body2" fontWeight={600} sx={{ mb: 0.5, textTransform: 'uppercase', fontSize: '0.7rem' }}>
               {title}
@@ -156,7 +153,9 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
           <Avatar variant="rounded" sx={{ 
             ...styles.iconAvatar, 
             backgroundColor: bgColors[color] || bgColors.primary, 
-            color: textColors[color] || textColors.primary 
+            color: textColors[color] || textColors.primary,
+            ml: 2,
+            flexShrink: 0
           }}>
             {icon}
           </Avatar>
@@ -201,7 +200,8 @@ export default function Dashboard() {
   const [dailyStats, setDailyStats] = useState(null)
   const [monthlyStats, setMonthlyStats] = useState(null)
   const [yearlyStats, setYearlyStats] = useState(null)
-  const [chartPeriod, setChartPeriod] = useState('7days') // Thêm state cho biểu đồ
+  const [chartPeriod, setChartPeriod] = useState('7days') 
+  const [activities, setActivities] = useState([]) 
   const navigate = useNavigate()
 
   // --- Handlers ---
@@ -221,6 +221,20 @@ export default function Dashboard() {
     fetchDailyStats()
     fetchMonthlyStats()
     fetchYearlyStats()
+    fetchActivities()
+    
+    // Auto-refresh data mỗi 30 giây
+    const interval = setInterval(() => {
+      fetchStats()
+      fetchSalesChart()
+      fetchTopProducts()
+      fetchDailyStats()
+      fetchMonthlyStats()
+      fetchYearlyStats()
+      fetchActivities()
+    }, 30000) // 30 giây
+    
+    return () => clearInterval(interval)
   }, [])
 
   // Refetch data khi viewType thay đổi
@@ -314,6 +328,16 @@ export default function Dashboard() {
     }
   }
 
+  const fetchActivities = async () => {
+    try {
+      const response = await api.get('/reports/recent-activities/')
+      setActivities(response.data || [])
+    } catch (error) {
+      console.error('Error fetching activities:', error)
+      setActivities([])
+    }
+  }
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -362,45 +386,60 @@ export default function Dashboard() {
     { name: 'Khác', value: 20, color: '#4facfe' },
   ]
 
-  const getChangeInfo = (today, yesterday) => {
-    if (yesterday === 0) {
+  const getChangeInfo = (today, previous) => {
+    if (previous === 0) {
       return { 
         change: 0, 
         changeType: today > 0 ? 'increase' : 'decrease',
-        description: 'Không có dữ liệu hôm qua'
+        description: 'Không có dữ liệu kỳ trước'
       };
     }
-    const diff = today - yesterday;
-    const percentChange = (diff / yesterday * 100).toFixed(1);
+    const diff = today - previous;
+    const percentChange = (diff / previous * 100).toFixed(1);
+    
+    let periodText = 'kỳ trước';
+    if (viewType === 'daily') {
+      periodText = 'hôm qua';
+    } else if (viewType === 'monthly') {
+      periodText = 'tháng trước';
+    } else if (viewType === 'yearly') {
+      periodText = 'năm trước';
+    }
+    
     return {
       change: Math.abs(percentChange),
       changeType: diff >= 0 ? 'increase' : 'decrease',
-      description: `${diff >= 0 ? '↑ Tăng' : '↓ Giảm'} ${Math.abs(percentChange)}% so với hôm qua`
+      description: `${diff >= 0 ? '↑ Tăng' : '↓ Giảm'} ${Math.abs(percentChange)}% so với ${periodText}`
     };
   };
 
   let currentRevenue = 0
   let currentOrders = 0
-  let yesterdayRevenue = 0
+  let previousRevenue = 0
+  let previousOrders = 0
 
   if (viewType === 'daily') {
     currentRevenue = dailyStats?.revenue || mockStats.today.revenue
     currentOrders = dailyStats?.orders_count || mockStats.today.orders_count
-    yesterdayRevenue = dailyStats?.yesterday_revenue || mockStatsYesterday.today.revenue
+    previousRevenue = dailyStats?.yesterday_revenue || mockStatsYesterday.today.revenue
+    previousOrders = dailyStats?.yesterday_orders_count || mockStatsYesterday.today.orders_count
   } else if (viewType === 'monthly') {
     currentRevenue = monthlyStats?.revenue || mockStats.today.revenue
     currentOrders = monthlyStats?.orders_count || mockStats.today.orders_count
-    yesterdayRevenue = monthlyStats?.previous_month_revenue || mockStatsYesterday.today.revenue
+    previousRevenue = monthlyStats?.previous_month_revenue || mockStatsYesterday.today.revenue
+    previousOrders = monthlyStats?.previous_month_orders_count || mockStatsYesterday.today.orders_count
   } else if (viewType === 'yearly') {
     currentRevenue = yearlyStats?.revenue || mockStats.today.revenue
     currentOrders = yearlyStats?.orders_count || mockStats.today.orders_count
-    yesterdayRevenue = yearlyStats?.previous_year_revenue || mockStatsYesterday.today.revenue
+    previousRevenue = yearlyStats?.previous_year_revenue || mockStatsYesterday.today.revenue
+    previousOrders = yearlyStats?.previous_year_orders_count || mockStatsYesterday.today.orders_count
   }
 
   const todayInventory = stats?.inventory?.low_stock_count ?? mockStats.inventory.low_stock_count
   const todayCustomers = stats?.customers?.total_count ?? mockStats.customers.total_count
 
-  const revenueChange = getChangeInfo(currentRevenue, yesterdayRevenue);
+  const revenueChange = getChangeInfo(currentRevenue, previousRevenue);
+  const ordersChange = getChangeInfo(currentOrders, previousOrders);
 
   const getPeriodLabel = () => {
     if (viewType === 'daily') return 'Hôm Nay'
@@ -424,7 +463,15 @@ export default function Dashboard() {
 
         <Stack direction="row" spacing={2} alignItems="center">
            <Tooltip title="Làm mới dữ liệu">
-              <IconButton size="small" onClick={() => window.location.reload()} sx={{ bgcolor: 'white', border: '1px solid #e2e8f0' }}>
+              <IconButton size="small" onClick={() => {
+                fetchStats()
+                fetchSalesChart()
+                fetchTopProducts()
+                fetchDailyStats()
+                fetchMonthlyStats()
+                fetchYearlyStats()
+                fetchActivities()
+              }} sx={{ bgcolor: 'white', border: '1px solid #e2e8f0' }}>
                  <Refresh fontSize="small"/>
               </IconButton>
            </Tooltip>
@@ -490,6 +537,9 @@ export default function Dashboard() {
             value={currentOrders}
             icon={<ShoppingCart />}
             color="primary"
+            change={ordersChange.change}
+            changeType={ordersChange.changeType}
+            changeDescription={ordersChange.description}
             onClick={handleOrdersClick}
           />
         </Grid>
@@ -519,23 +569,24 @@ export default function Dashboard() {
         <Grid item xs={12} lg={8}>
           <Card sx={dashboardStyles.chartCard} elevation={0}>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={dashboardStyles.chartTitle}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, position: 'relative' }}>
+                <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
                   Doanh thu
                 </Typography>
-                <ToggleButtonGroup
-                  value={chartPeriod}
-                  exclusive
-                  onChange={(event, newPeriod) => {
-                    if (newPeriod !== null) {
-                      setChartPeriod(newPeriod);
-                    }
-                  }}
-                  aria-label="chart period"
-                  size="small"
-                  sx={{ 
-                    backgroundColor: '#f5f5f5',
-                    '& .MuiToggleButton-root': {
+                <Box sx={{ ml: 'auto' }}>
+                  <ToggleButtonGroup
+                    value={chartPeriod}
+                    exclusive
+                    onChange={(event, newPeriod) => {
+                      if (newPeriod !== null) {
+                        setChartPeriod(newPeriod);
+                      }
+                    }}
+                    aria-label="chart period"
+                    size="small"
+                    sx={{ 
+                      backgroundColor: '#f5f5f5',
+                      '& .MuiToggleButton-root': {
                       border: '1px solid #e2e8f0',
                       px: 1.5,
                       py: 0.4,
@@ -556,6 +607,7 @@ export default function Dashboard() {
                   <ToggleButton value="7days">7 ngày qua</ToggleButton>
                   <ToggleButton value="12months">12 tháng qua</ToggleButton>
                 </ToggleButtonGroup>
+                </Box>
               </Box>
               <Box sx={{ mt: 3, height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -600,7 +652,7 @@ export default function Dashboard() {
         <Grid item xs={12} lg={4}>
           <Card sx={dashboardStyles.chartCard} elevation={0}>
             <CardContent>
-              <Typography variant="h6" sx={dashboardStyles.chartTitle}>
+              <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center' }}>
                 Phân bố sản phẩm
               </Typography>
               <Box sx={{ 
@@ -668,38 +720,41 @@ export default function Dashboard() {
         <Grid item xs={12} md={6}>
           <Card sx={dashboardStyles.activityCard} elevation={0}>
             <CardContent>
-              <Typography variant="h6" sx={dashboardStyles.chartTitle}>
+              <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center' }}>
                 Hoạt động gần đây
               </Typography>
               <Box sx={{ mt: 2 }}>
-                {[
-                  { action: 'Đơn hàng mới #1234', time: '5 phút trước', type: 'order' },
-                  { action: 'Sản phẩm iPhone 15 sắp hết hàng', time: '15 phút trước', type: 'warning' },
-                  { action: 'Khách hàng mới đăng ký', time: '30 phút trước', type: 'customer' },
-                  { action: 'Thanh toán đơn hàng #1230', time: '1 giờ trước', type: 'payment' },
-                ].map((activity, index) => (
-                  <Box key={index} sx={dashboardStyles.activityItem}>
-                    <Avatar sx={{ 
-                      width: 32, 
-                      height: 32, 
-                      backgroundColor: activity.type === 'order' ? 'primary.main' :
-                                     activity.type === 'warning' ? 'warning.main' :
-                                     activity.type === 'customer' ? 'success.main' : 'info.main'
-                    }}>
-                      {activity.type === 'order' ? <ShoppingCart sx={{ fontSize: '1rem'}} /> :
-                       activity.type === 'warning' ? <Inventory sx={{ fontSize: '1rem'}} /> :
-                       activity.type === 'customer' ? <People sx={{ fontSize: '1rem'}} /> : <AttachMoney sx={{ fontSize: '1rem'}} />}
-                    </Avatar>
-                    <Box sx={{ ml: 2, flex: 1 }}>
-                      <Typography variant="body2" fontWeight={500}>
-                        {activity.action}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {activity.time}
-                      </Typography>
+                {activities.length > 0 ? (
+                  activities.map((activity, index) => (
+                    <Box key={index} sx={dashboardStyles.activityItem}>
+                      <Avatar sx={{ 
+                        width: 32, 
+                        height: 32, 
+                        backgroundColor: activity.type === 'order' ? 'primary.main' :
+                                       activity.type === 'low_stock' ? 'warning.main' :
+                                       activity.type === 'customer' ? 'success.main' : 'info.main'
+                      }}>
+                        {activity.type === 'order' ? <ShoppingCart sx={{ fontSize: '1rem'}} /> :
+                         activity.type === 'low_stock' ? <Inventory sx={{ fontSize: '1rem'}} /> :
+                         activity.type === 'customer' ? <People sx={{ fontSize: '1rem'}} /> : <AttachMoney sx={{ fontSize: '1rem'}} />}
+                      </Avatar>
+                      <Box sx={{ ml: 2, flex: 1 }}>
+                        <Typography variant="body2" fontWeight={500}>
+                          {activity.action}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {activity.time}
+                        </Typography>
+                      </Box>
                     </Box>
+                  ))
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Chưa có hoạt động gần đây
+                    </Typography>
                   </Box>
-                ))}
+                )}
               </Box>
             </CardContent>
           </Card>
@@ -708,7 +763,7 @@ export default function Dashboard() {
         <Grid item xs={12} md={6}>
           <Card sx={dashboardStyles.activityCard} elevation={0}>
             <CardContent>
-              <Typography variant="h6" sx={dashboardStyles.chartTitle}>
+              <Typography variant="h6" sx={{ ...dashboardStyles.chartTitle, textAlign: 'center' }}>
                 Sản phẩm bán chạy
               </Typography>
               <Box sx={{ mt: 2 }}>
