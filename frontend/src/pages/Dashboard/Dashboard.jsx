@@ -1,70 +1,190 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-  Grid, 
-  Paper, 
-  Typography, 
-  Box, 
-  CircularProgress, 
+import LowStockAlert from '../../components/LowStockAlert/LowStockAlert'
+import {
+  Grid,
+  Typography,
+  Box,
+  CircularProgress,
   Alert,
   Card,
   CardContent,
   Avatar,
   Chip,
-  LinearProgress
+  LinearProgress,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Stack,
+  IconButton
 } from '@mui/material'
-import { 
-  TrendingUp, 
-  ShoppingCart, 
-  Inventory, 
+import {
+  TrendingUp,
+  ShoppingCart,
+  Inventory,
   People,
   AttachMoney,
-  LocalShipping,
-  Smartphone,
-  TrendingDown
+  TrendingDown,
+  Refresh
 } from '@mui/icons-material'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import api from '../../api/axios'
-import { dashboardStyles } from './Dashboard.styles'
 
-function StatCard({ title, value, icon, color = 'primary', change, changeType, onClick }) {
+// --- Style tùy chỉnh đã được FIX GỌN HƠN ---
+const styles = {
+  container: {
+    p: 3,
+    backgroundColor: '#f8f9fa',
+    minHeight: '100vh'
+  },
+  headerContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    mb: 3,
+    flexWrap: 'wrap',
+    gap: 2
+  },
+  statCard: {
+    height: '100%',
+    borderRadius: 3,
+    boxShadow: '0px 2px 10px rgba(0,0,0,0.03)',
+    transition: 'transform 0.2s',
+    width: 'fit-content',  
+    minWidth: '250px',    
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: '0px 8px 20px rgba(0,0,0,0.06)',
+    }
+  },
+  chartCard: {
+    borderRadius: 3,
+    boxShadow: '0px 2px 10px rgba(0,0,0,0.03)',
+    height: '100%'
+  },
+  // Đã sửa: Giảm kích thước icon avatar để gọn hơn
+  iconAvatar: {
+    width: 42,
+    height: 42, 
+    borderRadius: 2
+  }
+}
+
+// Legacy dashboardStyles - compatibility
+const dashboardStyles = {
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    backgroundColor: '#f8f9fa'
+  },
+  container: styles.container,
+  errorAlert: {
+    mb: 3
+  },
+  statsGrid: {
+    mb: 3
+  },
+  chartCard: styles.chartCard,
+  chartTitle: {
+    fontWeight: 600,
+    fontSize: '1.1rem',
+    color: '#1a202c'
+  },
+  activityCard: {
+    borderRadius: 3,
+    boxShadow: '0px 2px 10px rgba(0,0,0,0.03)'
+  },
+  activityItem: {
+    display: 'flex',
+    alignItems: 'center',
+    py: 1.5,
+    borderBottom: '1px solid #e2e8f0',
+    '&:last-child': {
+      borderBottom: 'none'
+    }
+  },
+  productItem: {
+    py: 1.5,
+    borderBottom: '1px solid #e2e8f0',
+    '&:last-child': {
+      borderBottom: 'none'
+    }
+  }
+}
+
+// --- Component StatCard đã được FIX ---
+function StatCard({ title, value, icon, color = 'primary', change, changeType, changeDescription, onClick }) {
+  const bgColors = {
+    primary: '#e3f2fd',
+    success: '#e8f5e9',
+    warning: '#fff3e0',
+    info: '#e1f5fe',
+    error: '#ffebee'
+  };
+  const textColors = {
+    primary: '#1976d2',
+    success: '#2e7d32',
+    warning: '#ed6c02',
+    info: '#0288d1',
+    error: '#d32f2f'
+  };
+
   return (
     <Card 
       sx={{
-        ...dashboardStyles.statCard,
+        ...styles.statCard,
         cursor: onClick ? 'pointer' : 'default',
-        '&:hover': onClick ? {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          transition: 'all 0.2s ease-in-out'
-        } : {}
       }} 
-      elevation={0}
       onClick={onClick}
     >
-      <CardContent sx={dashboardStyles.statCardContent}>
-        <Box sx={dashboardStyles.statHeader}>
-          <Avatar sx={{ ...dashboardStyles.statIcon, backgroundColor: `${color}.main` }}>
+      {/* Đã sửa: Giảm padding mặc định của CardContent (p: 2) và padding dưới cùng */}
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            {/* Đã sửa: Giảm margin bottom xuống 0.5 để sát với số tiền */}
+            <Typography color="text.secondary" variant="body2" fontWeight={600} sx={{ mb: 0.5, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+              {title}
+            </Typography>
+            {/* Đã sửa: Giảm line-height để số trông gọn hơn */}
+            <Typography variant="h5" fontWeight={700} sx={{ color: '#2d3748', lineHeight: 1.2 }}>
+              {value}
+            </Typography>
+          </Box>
+          <Avatar variant="rounded" sx={{ 
+            ...styles.iconAvatar, 
+            backgroundColor: bgColors[color] || bgColors.primary, 
+            color: textColors[color] || textColors.primary 
+          }}>
             {icon}
           </Avatar>
-          {change && (
+        </Box>
+        
+        {change && (
+          // Đã sửa: Giảm margin top từ 2 xuống 1.5 để kéo phần chip lên gần số tiền hơn
+          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1.5 }}>
             <Chip
-              icon={changeType === 'increase' ? <TrendingUp /> : <TrendingDown />}
+              icon={changeType === 'increase' ? <TrendingUp sx={{ fontSize: '0.9rem !important' }} /> : <TrendingDown sx={{ fontSize: '0.9rem !important' }} />}
               label={`${change}%`}
               size="small"
               color={changeType === 'increase' ? 'success' : 'error'}
-              variant="outlined"
+              sx={{ 
+                height: 22, // Chip nhỏ lại xíu
+                fontWeight: 600, 
+                fontSize: '0.75rem',
+                backgroundColor: changeType === 'increase' ? '#e8f5e9' : '#ffebee',
+                color: changeType === 'increase' ? '#2e7d32' : '#c62828',
+                border: 'none',
+                '& .MuiChip-label': { px: 0.8 }
+              }}
             />
-          )}
-        </Box>
-        <Box sx={dashboardStyles.statBody}>
-          <Typography variant="h4" sx={dashboardStyles.statValue}>
-            {value}
-          </Typography>
-          <Typography color="text.secondary" variant="body2" sx={dashboardStyles.statTitle}>
-            {title}
-          </Typography>
-        </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1, fontSize: '0.7rem' }}>
+              so với kỳ trước
+            </Typography>
+          </Box>
+        )}
       </CardContent>
     </Card>
   )
@@ -76,29 +196,42 @@ export default function Dashboard() {
   const [topProducts, setTopProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [lowStockAlertOpen, setLowStockAlertOpen] = useState(false)
+  const [viewType, setViewType] = useState('daily')
+  const [dailyStats, setDailyStats] = useState(null)
+  const [monthlyStats, setMonthlyStats] = useState(null)
+  const [yearlyStats, setYearlyStats] = useState(null)
   const navigate = useNavigate()
 
-  const handleOrdersTodayClick = () => {
-    navigate('/reports')
-  }
+  // --- Handlers ---
+  const handleViewChange = (event, newView) => {
+    if (newView !== null) {
+      setViewType(newView);
+    }
+  };
 
-  const handleCustomersClick = () => {
-    navigate('/customers')
-  }
-
-   const handleReportsClick = () => {
-    navigate('/reports')
-  }
-
-  const handleInventoryClick = () => {
-    navigate('/inventory')
-  }
+  const handleOrdersClick = () => navigate('/orders')
+  const handleCustomersClick = () => navigate('/customers')
 
   useEffect(() => {
     fetchStats()
     fetchSalesChart()
     fetchTopProducts()
+    fetchDailyStats()
+    fetchMonthlyStats()
+    fetchYearlyStats()
   }, [])
+
+  // Refetch data khi viewType thay đổi
+  useEffect(() => {
+    if (viewType === 'daily') {
+      fetchDailyStats()
+    } else if (viewType === 'monthly') {
+      fetchMonthlyStats()
+    } else if (viewType === 'yearly') {
+      fetchYearlyStats()
+    }
+  }, [viewType])
 
   const fetchStats = async () => {
     try {
@@ -112,14 +245,39 @@ export default function Dashboard() {
     }
   }
 
+  const fetchDailyStats = async () => {
+    try {
+      const response = await api.get('/reports/daily-stats/')
+      setDailyStats(response.data)
+    } catch (error) {
+      console.error('Error fetching daily stats:', error)
+    }
+  }
+
+  const fetchMonthlyStats = async () => {
+    try {
+      const response = await api.get('/reports/monthly-stats/')
+      setMonthlyStats(response.data)
+    } catch (error) {
+      console.error('Error fetching monthly stats:', error)
+    }
+  }
+
+  const fetchYearlyStats = async () => {
+    try {
+      const response = await api.get('/reports/yearly-stats/')
+      setYearlyStats(response.data)
+    } catch (error) {
+      console.error('Error fetching yearly stats:', error)
+    }
+  }
+
   const fetchSalesChart = async () => {
     try {
-      // Fetch real sales data for last 7 days from new endpoint
       const response = await api.get('/reports/daily-revenue/', { params: { days: 7 } })
       setSalesData(response.data.data || [])
     } catch (error) {
       console.error('Error fetching sales chart:', error)
-      // Set empty data on error instead of random data
       setSalesData([])
     }
   }
@@ -161,34 +319,126 @@ export default function Dashboard() {
     inventory: { low_stock_count: 8 },
     customers: { total_count: 1250 }
   }
+  const mockStatsYesterday = {
+    today: { revenue: 12000000, orders_count: 50 },
+    inventory: { low_stock_count: 10 },
+    customers: { total_count: 1235 }
+  }
 
   const mockSalesData = [
-    { name: 'T2', doanhthu: 8500000, donhang: 25 },
-    { name: 'T3', doanhthu: 12000000, donhang: 32 },
-    { name: 'T4', doanhthu: 9800000, donhang: 28 },
-    { name: 'T5', doanhthu: 15000000, donhang: 45 },
-    { name: 'T6', doanhthu: 18200000, donhang: 52 },
-    { name: 'T7', doanhthu: 16500000, donhang: 48 },
-    { name: 'CN', doanhthu: 11200000, donhang: 35 }
+    { name: 'Thứ 2', doanhthu: 4000000 },
+    { name: 'Thứ 3', doanhthu: 3000000 },
+    { name: 'Thứ 4', doanhthu: 2000000 },
+    { name: 'Thứ 5', doanhthu: 2780000 },
+    { name: 'Thứ 6', doanhthu: 1890000 },
+    { name: 'Thứ 7', doanhthu: 2390000 },
+    { name: 'Chủ nhật', doanhthu: 3490000 },
   ]
 
   const pieData = [
     { name: 'iPhone', value: 35, color: '#667eea' },
-    { name: 'Samsung', value: 30, color: '#764ba2' },
-    { name: 'Xiaomi', value: 20, color: '#48bb78' },
-    { name: 'Oppo', value: 15, color: '#ed8936' }
+    { name: 'Samsung', value: 25, color: '#764ba2' },
+    { name: 'Xiaomi', value: 20, color: '#f093fb' },
+    { name: 'Khác', value: 20, color: '#4facfe' },
   ]
+
+  const getChangeInfo = (today, yesterday) => {
+    if (yesterday === 0) {
+      return { 
+        change: 0, 
+        changeType: today > 0 ? 'increase' : 'decrease',
+        description: 'Không có dữ liệu hôm qua'
+      };
+    }
+    const diff = today - yesterday;
+    const percentChange = (diff / yesterday * 100).toFixed(1);
+    return {
+      change: Math.abs(percentChange),
+      changeType: diff >= 0 ? 'increase' : 'decrease',
+      description: `${diff >= 0 ? '↑ Tăng' : '↓ Giảm'} ${Math.abs(percentChange)}% so với hôm qua`
+    };
+  };
+
+  let currentRevenue = 0
+  let currentOrders = 0
+  let yesterdayRevenue = 0
+
+  if (viewType === 'daily') {
+    currentRevenue = dailyStats?.revenue || mockStats.today.revenue
+    currentOrders = dailyStats?.orders_count || mockStats.today.orders_count
+    yesterdayRevenue = dailyStats?.yesterday_revenue || mockStatsYesterday.today.revenue
+  } else if (viewType === 'monthly') {
+    currentRevenue = monthlyStats?.revenue || mockStats.today.revenue
+    currentOrders = monthlyStats?.orders_count || mockStats.today.orders_count
+    yesterdayRevenue = monthlyStats?.previous_month_revenue || mockStatsYesterday.today.revenue
+  } else if (viewType === 'yearly') {
+    currentRevenue = yearlyStats?.revenue || mockStats.today.revenue
+    currentOrders = yearlyStats?.orders_count || mockStats.today.orders_count
+    yesterdayRevenue = yearlyStats?.previous_year_revenue || mockStatsYesterday.today.revenue
+  }
+
+  const todayInventory = stats?.inventory?.low_stock_count ?? mockStats.inventory.low_stock_count
+  const todayCustomers = stats?.customers?.total_count ?? mockStats.customers.total_count
+
+  const revenueChange = getChangeInfo(currentRevenue, yesterdayRevenue);
+
+  const getPeriodLabel = () => {
+    if (viewType === 'daily') return 'Hôm Nay'
+    if (viewType === 'monthly') return 'Tháng Này'
+    if (viewType === 'yearly') return 'Năm Này'
+    return ''
+  }
 
   return (
     <Box sx={dashboardStyles.container}>
       {/* Header */}
-      <Box sx={dashboardStyles.header}>
-        <Typography variant="h4" sx={dashboardStyles.title}>
-          Chào mừng trở lại! 👋
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Tổng quan về hoạt động kinh doanh hôm nay
-        </Typography>
+      <Box sx={styles.headerContainer}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+            📊 Bảng Điều Khiển
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Thống kê kinh doanh {getPeriodLabel()}
+          </Typography>
+        </Box>
+
+        <Stack direction="row" spacing={2} alignItems="center">
+           <Tooltip title="Làm mới dữ liệu">
+              <IconButton size="small" onClick={() => window.location.reload()} sx={{ bgcolor: 'white', border: '1px solid #e2e8f0' }}>
+                 <Refresh fontSize="small"/>
+              </IconButton>
+           </Tooltip>
+           
+           <ToggleButtonGroup
+            value={viewType}
+            exclusive
+            onChange={handleViewChange}
+            aria-label="time range"
+            size="small"
+            sx={{ 
+              backgroundColor: 'white',
+              '& .MuiToggleButton-root': {
+                border: '1px solid #e2e8f0',
+                px: 2,
+                py: 0.5,
+                textTransform: 'none',
+                fontWeight: 500,
+                color: '#64748b',
+                '&.Mui-selected': {
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#5a67d8',
+                  }
+                }
+              }
+            }}
+          >
+            <ToggleButton value="daily">Hôm nay</ToggleButton>
+            <ToggleButton value="monthly">Tháng này</ToggleButton>
+            <ToggleButton value="yearly">Năm này</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       </Box>
 
       {error && (
@@ -196,50 +446,48 @@ export default function Dashboard() {
           {error}
         </Alert>
       )}
-      
+
       {/* Stats Cards */}
       <Grid container spacing={3} sx={dashboardStyles.statsGrid}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard 
-            title="Doanh thu hôm nay"
-            value={formatCurrency(stats?.today?.revenue || mockStats.today.revenue)}
+            title={
+              viewType === 'daily' ? 'Doanh Thu' :
+              viewType === 'monthly' ? 'Doanh Thu' :
+              'Doanh Thu'
+            }
+            value={formatCurrency(currentRevenue)}
             icon={<AttachMoney />}
             color="success"
-            change={12.5}
-            changeType="increase"
-            onClick={handleReportsClick}
+            change={revenueChange.change}
+            changeType={revenueChange.changeType}
+            changeDescription={revenueChange.description}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard 
-            title="Đơn hàng hôm nay"
-            value={stats?.today?.orders_count || mockStats.today.orders_count}
+            title="Đơn Hàng"
+            value={currentOrders}
             icon={<ShoppingCart />}
             color="primary"
-            change={8.2}
-            changeType="increase"
-            onClick={handleOrdersTodayClick}
+            onClick={handleOrdersClick}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard 
-            title="Sản phẩm sắp hết"
-            value={stats?.inventory?.low_stock_count || mockStats.inventory.low_stock_count}
+            title="Sắp hết hàng"
+            value={todayInventory}
             icon={<Inventory />}
             color="warning"
-            change={3.1}
-            changeType="decrease"
-            onClick={handleInventoryClick}
+            onClick={() => setLowStockAlertOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard 
-            title="Tổng khách hàng"
-            value={stats?.customers?.total_count || mockStats.customers.total_count}
+            title="Khách hàng"
+            value={todayCustomers}
             icon={<People />}
             color="info"
-            change={15.3}
-            changeType="increase"
             onClick={handleCustomersClick}
           />
         </Grid>
@@ -257,38 +505,35 @@ export default function Dashboard() {
               <Box sx={{ mt: 3, height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={salesData.length ? salesData : mockSalesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                     <XAxis 
                       dataKey="name" 
                       tick={{ fontSize: 12, fill: '#64748b' }}
                       axisLine={{ stroke: '#e2e8f0' }}
+                      tickLine={false}
                     />
                     <YAxis 
-                      tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                      tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
                       tick={{ fontSize: 12, fill: '#64748b' }}
-                      axisLine={{ stroke: '#e2e8f0' }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                    <Tooltip 
+                    <RechartsTooltip 
                       formatter={(value) => formatCurrency(value)}
-                      labelStyle={{ color: '#1a202c' }}
+                      cursor={{ fill: 'transparent' }}
                       contentStyle={{ 
                         backgroundColor: '#fff', 
-                        border: '1px solid #e2e8f0',
+                        border: 'none',
                         borderRadius: '8px',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
                       }}
                     />
                     <Bar 
                       dataKey="doanhthu" 
-                      fill="url(#colorGradient)" 
+                      fill="#667eea" 
                       radius={[4, 4, 0, 0]}
+                      barSize={40}
                     />
-                    <defs>
-                      <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#667eea" />
-                        <stop offset="100%" stopColor="#764ba2" />
-                      </linearGradient>
-                    </defs>
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -309,46 +554,30 @@ export default function Dashboard() {
                 display: 'flex', 
                 flexDirection: 'column',
                 alignItems: 'center', 
-                justifyContent: 'center', 
-                '& .recharts-wrapper': {
-                  outline: 'none !important',
-                },
-                '& *': {
-                  outline: 'none !important',
-                }
+                justifyContent: 'center'
               }}>
-                <ResponsiveContainer width="100%" height="85%">
+                <ResponsiveContainer width="100%" height="80%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={0}
+                      innerRadius={60}
                       outerRadius={80}
-                      fill="#8884d8"
+                      paddingAngle={5}
                       dataKey="value"
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                      isAnimationActive={true}
-                      activeIndex={null}
-                      activeShape={null}
                     >
                       {pieData.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
-                          fill={entry.color}
-                          style={{ outline: 'none', cursor: 'default' }}
+                          fill={entry.color} 
+                          stroke="none"
                         />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <RechartsTooltip 
                       formatter={(value) => `${value}%`}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                      }}
+                      contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -357,16 +586,15 @@ export default function Dashboard() {
                   flexWrap: 'wrap', 
                   justifyContent: 'center', 
                   gap: 2,
-                  mt: 1,
-                  px: 2
+                  mt: 0
                 }}>
                   {pieData.map((entry, index) => (
                     <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Box sx={{ 
-                        width: 12, 
-                        height: 12, 
+                        width: 10, 
+                        height: 10, 
                         backgroundColor: entry.color,
-                        borderRadius: '2px'
+                        borderRadius: '50%'
                       }} />
                       <Typography variant="body2" sx={{ fontSize: '13px', color: '#4A5568' }}>
                         {entry.name}
@@ -403,9 +631,9 @@ export default function Dashboard() {
                                      activity.type === 'warning' ? 'warning.main' :
                                      activity.type === 'customer' ? 'success.main' : 'info.main'
                     }}>
-                      {activity.type === 'order' ? <ShoppingCart /> :
-                       activity.type === 'warning' ? <Inventory /> :
-                       activity.type === 'customer' ? <People /> : <AttachMoney />}
+                      {activity.type === 'order' ? <ShoppingCart sx={{ fontSize: '1rem'}} /> :
+                       activity.type === 'warning' ? <Inventory sx={{ fontSize: '1rem'}} /> :
+                       activity.type === 'customer' ? <People sx={{ fontSize: '1rem'}} /> : <AttachMoney sx={{ fontSize: '1rem'}} />}
                     </Avatar>
                     <Box sx={{ ml: 2, flex: 1 }}>
                       <Typography variant="body2" fontWeight={500}>
@@ -431,7 +659,6 @@ export default function Dashboard() {
               <Box sx={{ mt: 2 }}>
                 {topProducts.length > 0 ? (
                   topProducts.map((product, index) => {
-                    // Calculate progress based on max quantity
                     const maxQty = topProducts[0]?.total_qty || 1
                     const progress = (product.total_qty / maxQty) * 100
                     
@@ -465,6 +692,11 @@ export default function Dashboard() {
           </Card>
         </Grid>
       </Grid>
+
+      <LowStockAlert 
+        open={lowStockAlertOpen} 
+        onClose={() => setLowStockAlertOpen(false)} 
+      />
     </Box>
   )
 }

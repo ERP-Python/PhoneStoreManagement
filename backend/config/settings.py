@@ -176,7 +176,7 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # VNPay Configuration - Sandbox
-VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', 'XCO6J35O')
+VNPAY_TMN_CODE = 'XCO6J35O'
 VNPAY_HASH_SECRET_KEY = os.getenv('VNPAY_HASH_SECRET_KEY', 'QSLJAQXHA0E0NUOPI7XG9O5DVODCGRJD')
 VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', 'http://localhost:8000/api/payments/vnpay/return/')
 VNPAY_PAYMENT_URL = os.getenv('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')

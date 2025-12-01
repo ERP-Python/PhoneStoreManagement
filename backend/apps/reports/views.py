@@ -421,4 +421,102 @@ def daily_revenue_chart(request):
         'data': chart_data,
         'total_revenue': sum(item['doanhthu'] for item in chart_data),
         'total_orders': sum(item['orders'] for item in chart_data)
-    }) 
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def daily_stats(request):
+    """
+    Daily statistics for today
+    """
+    from datetime import date
+    
+    today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday = today - timedelta(days=1)
+    
+    # Today's stats
+    today_orders = Order.objects.filter(created_at__gte=today, status='paid')
+    today_revenue = today_orders.aggregate(total=Sum('total'))['total'] or 0
+    today_count = today_orders.count()
+    
+    # Yesterday's stats
+    yesterday_orders = Order.objects.filter(created_at__gte=yesterday, created_at__lt=today, status='paid')
+    yesterday_revenue = yesterday_orders.aggregate(total=Sum('total'))['total'] or 0
+    yesterday_count = yesterday_orders.count()
+    
+    return Response({
+        'revenue': float(today_revenue),
+        'orders_count': today_count,
+        'yesterday_revenue': float(yesterday_revenue),
+        'yesterday_orders_count': yesterday_count
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def monthly_stats(request):
+    """
+    Monthly statistics for current month
+    """
+    today = timezone.now()
+    current_month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Previous month
+    if current_month_start.month == 1:
+        previous_month_start = current_month_start.replace(year=current_month_start.year - 1, month=12)
+    else:
+        previous_month_start = current_month_start.replace(month=current_month_start.month - 1)
+    
+    # Current month stats
+    current_orders = Order.objects.filter(created_at__gte=current_month_start, status='paid')
+    current_revenue = current_orders.aggregate(total=Sum('total'))['total'] or 0
+    current_count = current_orders.count()
+    
+    # Previous month stats
+    previous_orders = Order.objects.filter(
+        created_at__gte=previous_month_start,
+        created_at__lt=current_month_start,
+        status='paid'
+    )
+    previous_revenue = previous_orders.aggregate(total=Sum('total'))['total'] or 0
+    previous_count = previous_orders.count()
+    
+    return Response({
+        'revenue': float(current_revenue),
+        'orders_count': current_count,
+        'previous_month_revenue': float(previous_revenue),
+        'previous_month_orders_count': previous_count
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def yearly_stats(request):
+    """
+    Yearly statistics for current year
+    """
+    today = timezone.now()
+    current_year_start = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    previous_year_start = current_year_start.replace(year=current_year_start.year - 1)
+    
+    # Current year stats
+    current_orders = Order.objects.filter(created_at__gte=current_year_start, status='paid')
+    current_revenue = current_orders.aggregate(total=Sum('total'))['total'] or 0
+    current_count = current_orders.count()
+    
+    # Previous year stats
+    previous_orders = Order.objects.filter(
+        created_at__gte=previous_year_start,
+        created_at__lt=current_year_start,
+        status='paid'
+    )
+    previous_revenue = previous_orders.aggregate(total=Sum('total'))['total'] or 0
+    previous_count = previous_orders.count()
+    
+    return Response({
+        'revenue': float(current_revenue),
+        'orders_count': current_count,
+        'previous_year_revenue': float(previous_revenue),
+        'previous_year_orders_count': previous_count
+    })

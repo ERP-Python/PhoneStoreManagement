@@ -34,6 +34,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     total_amount = serializers.ReadOnlyField()
     approved_by_name = serializers.CharField(source='approved_by.username', read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    code = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = PurchaseOrder
@@ -93,6 +94,7 @@ class StockInItemSerializer(serializers.ModelSerializer):
 class StockInSerializer(serializers.ModelSerializer):
     items = StockInItemSerializer(many=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    code = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = StockIn

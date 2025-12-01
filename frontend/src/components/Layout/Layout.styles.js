@@ -207,8 +207,12 @@ export const drawerWidth = 280
 export const menuItems = [
   { text: 'Dashboard', icon: 'Dashboard', path: '/' },
   { text: 'Products', icon: 'Store', path: '/products' },
+  { text: 'Brands', icon: 'Category', path: '/brands' },
   { text: 'Orders', icon: 'ShoppingCart', path: '/orders' },
   { text: 'Customers', icon: 'People', path: '/customers' },
   { text: 'Inventory', icon: 'Inventory', path: '/inventory' },
+  { text: 'Suppliers', icon: 'Business', path: '/suppliers' },
+  { text: 'Purchase Orders', icon: 'LocalShipping', path: '/purchase-orders' },
+  { text: 'Stock In', icon: 'MoveToInbox', path: '/stock-in' },
   { text: 'Reports', icon: 'Assessment', path: '/reports' },
 ]

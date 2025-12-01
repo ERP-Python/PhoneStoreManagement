@@ -31,7 +31,11 @@ import {
   AccountCircle,
   Notifications,
   Settings,
-  Logout
+  Logout,
+  Category,
+  Business,
+  LocalShipping,
+  MoveToInbox
 } from '@mui/icons-material'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
@@ -42,9 +46,13 @@ import logoImage from '../../assets/images/logo.png'
 const iconMap = {
   Dashboard: <Dashboard />,
   Store: <Store />,
+  Category: <Category />,
   ShoppingCart: <ShoppingCart />,
   People: <People />,
   Inventory: <Inventory />,
+  Business: <Business />,
+  LocalShipping: <LocalShipping />,
+  MoveToInbox: <MoveToInbox />,
   Assessment: <Assessment />,
 }
 
