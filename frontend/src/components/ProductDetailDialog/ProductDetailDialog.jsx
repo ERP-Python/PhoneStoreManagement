@@ -64,11 +64,13 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
             const variant = activeVariants.find(v => v.rom === selectedRom && v.color === selectedColor)
             if (variant) {
                 setCurrentVariant(variant)
+                setCurrentImageIndex(0) // Reset image index when variant changes
             }
         }
     }, [selectedRom, selectedColor, product])
 
-    const images = product?.images || []
+    // Get images from current variant
+    const images = currentVariant?.images || []
     const variants = product?.variants?.filter(v => v.is_active) || []
     const hasImages = images.length > 0
 
@@ -121,7 +123,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
         <Dialog
             open={open}
             onClose={handleClose}
-            maxWidth="lg"
+            maxWidth="md"
             fullWidth
             PaperProps={{
                 sx: {
@@ -145,7 +147,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                 </IconButton>
             </DialogTitle>
 
-            <DialogContent sx={{ p: 3 }}>
+            <DialogContent sx={{ p: 3, pt: 4 }}>
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
                         <CircularProgress />
@@ -165,9 +167,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                                 width: '100%',
                                                 height: 400,
                                                 objectFit: 'contain',
-                                                borderRadius: 2,
-                                                border: '1px solid #e2e8f0',
-                                                backgroundColor: '#f8f9fa'
+                                                backgroundColor: '#fff'
                                             }}
                                         />
                                         {images.length > 1 && (
@@ -176,27 +176,35 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                                     onClick={handlePrevImage}
                                                     sx={{
                                                         position: 'absolute',
-                                                        left: 8,
+                                                        left: -20,
                                                         top: '50%',
                                                         transform: 'translateY(-50%)',
-                                                        backgroundColor: 'rgba(255,255,255,0.9)',
-                                                        '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                        backgroundColor: '#9ca3af',
+                                                        color: '#fff',
+                                                        width: 40,
+                                                        height: 40,
+                                                        border: '2px solid #9ca3af',
+                                                        '&:hover': { backgroundColor: '#6b7280', borderColor: '#6b7280' }
                                                     }}
                                                 >
-                                                    <NavigateBefore />
+                                                    <NavigateBefore sx={{ color: '#fff' }} />
                                                 </IconButton>
                                                 <IconButton
                                                     onClick={handleNextImage}
                                                     sx={{
                                                         position: 'absolute',
-                                                        right: 8,
+                                                        right: -20,
                                                         top: '50%',
                                                         transform: 'translateY(-50%)',
-                                                        backgroundColor: 'rgba(255,255,255,0.9)',
-                                                        '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                        backgroundColor: '#9ca3af',
+                                                        color: '#fff',
+                                                        width: 40,
+                                                        height: 40,
+                                                        border: '2px solid #9ca3af',
+                                                        '&:hover': { backgroundColor: '#6b7280', borderColor: '#6b7280' }
                                                     }}
                                                 >
-                                                    <NavigateNext />
+                                                    <NavigateNext sx={{ color: '#fff' }} />
                                                 </IconButton>
                                             </>
                                         )}
@@ -219,28 +227,69 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                 )}
 
                                 {/* Thumbnail images */}
-                                {images.length > 1 && (
-                                    <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-                                        {images.map((img, index) => (
-                                            <Box
-                                                key={img.id}
-                                                component="img"
-                                                src={img.image}
-                                                alt={`${product.name} ${index + 1}`}
-                                                onClick={() => setCurrentImageIndex(index)}
-                                                sx={{
-                                                    width: 60,
-                                                    height: 60,
-                                                    objectFit: 'cover',
-                                                    borderRadius: 1,
-                                                    border: currentImageIndex === index ? '2px solid #667eea' : '1px solid #e2e8f0',
-                                                    cursor: 'pointer',
-                                                    '&:hover': {
-                                                        borderColor: '#667eea'
-                                                    }
-                                                }}
-                                            />
-                                        ))}
+                                {images.length > 0 && (
+                                    <Box sx={{ position: 'relative', mt: 2 }}>
+                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'nowrap', justifyContent: 'center', overflow: 'hidden' }}>
+                                            {images.map((img, index) => (
+                                                <Box
+                                                    key={img.id}
+                                                    component="img"
+                                                    src={img.image}
+                                                    alt={`${product.name} ${index + 1}`}
+                                                    onClick={() => setCurrentImageIndex(index)}
+                                                    sx={{
+                                                        width: 60,
+                                                        height: 60,
+                                                        objectFit: 'cover',
+                                                        borderRadius: 1,
+                                                        border: currentImageIndex === index ? '2px solid #667eea' : '1px solid #e2e8f0',
+                                                        cursor: 'pointer',
+                                                        flexShrink: 0,
+                                                        '&:hover': {
+                                                            borderColor: '#667eea'
+                                                        }
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                        {images.length > 4 && (
+                                            <>
+                                                <IconButton
+                                                    size="small"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        left: -16,
+                                                        top: '50%',
+                                                        transform: 'translateY(-50%)',
+                                                        backgroundColor: '#9ca3af',
+                                                        color: '#fff',
+                                                        width: 32,
+                                                        height: 32,
+                                                        border: '2px solid #9ca3af',
+                                                        '&:hover': { backgroundColor: '#6b7280', borderColor: '#6b7280' }
+                                                    }}
+                                                >
+                                                    <NavigateBefore sx={{ fontSize: 20, color: '#fff' }} />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        right: -16,
+                                                        top: '50%',
+                                                        transform: 'translateY(-50%)',
+                                                        backgroundColor: '#9ca3af',
+                                                        color: '#fff',
+                                                        width: 32,
+                                                        height: 32,
+                                                        border: '2px solid #9ca3af',
+                                                        '&:hover': { backgroundColor: '#6b7280', borderColor: '#6b7280' }
+                                                    }}
+                                                >
+                                                    <NavigateNext sx={{ fontSize: 20, color: '#fff' }} />
+                                                </IconButton>
+                                            </>
+                                        )}
                                     </Box>
                                 )}
                             </Box>
@@ -292,20 +341,22 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                             {romOptions.map((rom) => (
                                                 <Button
                                                     key={rom}
-                                                    variant={selectedRom === rom ? 'contained' : 'outlined'}
+                                                    variant="outlined"
                                                     onClick={() => setSelectedRom(rom)}
                                                     sx={{
                                                         minWidth: 100,
                                                         height: 48,
                                                         borderRadius: 2,
+                                                        borderWidth: 2,
                                                         borderColor: selectedRom === rom ? '#667eea' : '#e2e8f0',
-                                                        backgroundColor: selectedRom === rom ? '#667eea' : '#fff',
-                                                        color: selectedRom === rom ? '#fff' : '#1e293b',
+                                                        backgroundColor: '#fff',
+                                                        color: selectedRom === rom ? '#667eea' : '#1e293b',
                                                         fontWeight: 500,
                                                         textTransform: 'none',
                                                         '&:hover': {
+                                                            borderWidth: 2,
                                                             borderColor: '#667eea',
-                                                            backgroundColor: selectedRom === rom ? '#5a67d8' : 'rgba(102, 126, 234, 0.04)'
+                                                            backgroundColor: '#fff'
                                                         }
                                                     }}
                                                 >
@@ -325,22 +376,24 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                             {colorOptions.map((color) => {
                                                 const available = isColorAvailable(color)
-                                                const variant = variants.find(v => v.color === color && v.rom === selectedRom)
-                                                const colorImage = variant ? images.find(img => img.color === color) : null
+                                                // Get variant for this color regardless of selected ROM to show image
+                                                const variant = variants.find(v => v.color === color)
+                                                const firstImage = variant?.images?.[0]
 
                                                 return (
                                                     <Button
                                                         key={color}
-                                                        variant={selectedColor === color ? 'contained' : 'outlined'}
+                                                        variant="outlined"
                                                         onClick={() => available && setSelectedColor(color)}
                                                         disabled={!available}
                                                         sx={{
                                                             minWidth: 140,
                                                             height: 64,
                                                             borderRadius: 2,
+                                                            borderWidth: 2,
                                                             borderColor: selectedColor === color ? '#667eea' : '#e2e8f0',
-                                                            backgroundColor: selectedColor === color ? '#667eea' : '#fff',
-                                                            color: selectedColor === color ? '#fff' : '#1e293b',
+                                                            backgroundColor: '#fff',
+                                                            color: '#1e293b',
                                                             fontWeight: 500,
                                                             textTransform: 'none',
                                                             display: 'flex',
@@ -351,8 +404,9 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                                             opacity: available ? 1 : 0.4,
                                                             cursor: available ? 'pointer' : 'not-allowed',
                                                             '&:hover': {
+                                                                borderWidth: 2,
                                                                 borderColor: available ? '#667eea' : '#e2e8f0',
-                                                                backgroundColor: selectedColor === color ? '#5a67d8' : (available ? 'rgba(102, 126, 234, 0.04)' : '#fff')
+                                                                backgroundColor: '#fff'
                                                             },
                                                             '&.Mui-disabled': {
                                                                 borderColor: '#e2e8f0',
@@ -361,10 +415,10 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                                             }
                                                         }}
                                                     >
-                                                        {colorImage && (
+                                                        {firstImage && (
                                                             <Box
                                                                 component="img"
-                                                                src={colorImage.image}
+                                                                src={firstImage.image}
                                                                 alt={color}
                                                                 sx={{
                                                                     width: 40,

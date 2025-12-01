@@ -39,12 +39,13 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductVariantSerializer(serializers.ModelSerializer):
     current_stock = serializers.ReadOnlyField()
     product_detail = serializers.SerializerMethodField(read_only=True)
+    images = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductVariant
         fields = ['id', 'product', 'product_detail', 'ram', 'rom', 'color', 'sku', 
-                  'price', 'is_active', 'current_stock', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at', 'product_detail']
+                  'price', 'is_active', 'current_stock', 'images', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'product_detail', 'images']
     
     def get_product_detail(self, obj):
         brand_data = None
@@ -59,6 +60,33 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             'sku': obj.product.sku,
             'brand': brand_data
         }
+    
+    def get_images(self, obj):
+        """Generate image URLs based on file system structure"""
+        import os
+        from django.conf import settings
+        
+        images = []
+        # Path: products/{product_id}/{variant_id}/
+        variant_folder = os.path.join(
+            settings.BASE_DIR,
+            'apps', 'assets', 'images', 'products',
+            str(obj.product.id),
+            str(obj.id)
+        )
+        
+        if os.path.exists(variant_folder):
+            # Get all .jpg files and sort them
+            image_files = sorted([f for f in os.listdir(variant_folder) if f.endswith('.jpg')])
+            for img_file in image_files:
+                images.append({
+                    'id': f"{obj.product.id}_{obj.id}_{img_file}",
+                    'image': f'/assets/images/products/{obj.product.id}/{obj.id}/{img_file}',
+                    'is_primary': img_file == '1.jpg',
+                    'sort_order': int(img_file.split('.')[0]) if img_file.split('.')[0].isdigit() else 0
+                })
+        
+        return images
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -77,19 +105,40 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
 
     def get_primary_image(self, obj):
-        # Kiểm tra nếu có ảnh được upload trong database
-        primary = obj.images.filter(is_primary=True).first()
-        if primary:
-            return ProductImageSerializer(primary).data
+        """Get the first image from the first active variant"""
+        import os
+        from django.conf import settings
         
-        # Tự động map ảnh từ 1.jpg đến 12.jpg dựa theo ID sản phẩm
-        # Công thức: ((id - 1) % 12) + 1 để có số từ 1-12
-        image_number = ((obj.id - 1) % 12) + 1
-        image_url = f'/assets/images/{image_number}.jpg'
+        # Get first active variant
+        first_variant = obj.variants.filter(is_active=True).first()
+        if not first_variant:
+            # Fallback to any variant
+            first_variant = obj.variants.first()
         
+        if first_variant:
+            # Path: products/{product_id}/{variant_id}/1.jpg
+            image_path = f'/assets/images/products/{obj.id}/{first_variant.id}/1.jpg'
+            variant_folder = os.path.join(
+                settings.BASE_DIR,
+                'apps', 'assets', 'images', 'products',
+                str(obj.id),
+                str(first_variant.id)
+            )
+            
+            # Check if the image file exists
+            if os.path.exists(os.path.join(variant_folder, '1.jpg')):
+                return {
+                    'id': f"{obj.id}_{first_variant.id}_1",
+                    'image': image_path,
+                    'is_primary': True,
+                    'sort_order': 0,
+                    'created_at': obj.created_at
+                }
+        
+        # Fallback to default image
         return {
             'id': None,
-            'image': image_url,
+            'image': '/assets/images/1.jpg',
             'is_primary': True,
             'sort_order': 0,
             'created_at': obj.created_at
