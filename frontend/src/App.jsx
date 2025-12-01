@@ -10,7 +10,7 @@ import Orders from './pages/Orders/Orders'
 import Customers from './pages/Customers/Customers'
 import Inventory from './pages/Inventory/Inventory'
 import Suppliers from './pages/Suppliers/Suppliers'
-import PurchaseOrders from './pages/PurchaseOrders/PurchaseOrders'
+// import PurchaseOrders from './pages/PurchaseOrders/PurchaseOrders'
 import StockIn from './pages/StockIn/StockIn'
 import Reports from './pages/Reports/Reports'
 
@@ -43,7 +43,7 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="suppliers" element={<Suppliers />} />
-          <Route path="purchase-orders" element={<PurchaseOrders />} />
+          {/* <Route path="purchase-orders" element={<PurchaseOrders />} /> */}
           <Route path="stock-in" element={<StockIn />} />
           <Route path="reports" element={<Reports />} />
         </Route>

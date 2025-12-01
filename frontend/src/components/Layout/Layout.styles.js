@@ -212,7 +212,7 @@ export const menuItems = [
   { text: 'Customers', icon: 'People', path: '/customers' },
   { text: 'Inventory', icon: 'Inventory', path: '/inventory' },
   { text: 'Suppliers', icon: 'Business', path: '/suppliers' },
-  { text: 'Purchase Orders', icon: 'LocalShipping', path: '/purchase-orders' },
+  // { text: 'Purchase Orders', icon: 'LocalShipping', path: '/purchase-orders' },
   { text: 'Stock In', icon: 'MoveToInbox', path: '/stock-in' },
   { text: 'Reports', icon: 'Assessment', path: '/reports' },
 ]
