@@ -9,10 +9,24 @@ class BrandSerializer(serializers.ModelSerializer):
         model = Brand
         fields = ['id', 'name', 'slug', 'description', 'logo', 'is_active', 
                   'products_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
 
     def get_products_count(self, obj):
         return obj.products.filter(is_active=True).count()
+    
+    def create(self, validated_data):
+        # Auto-generate slug from name if not provided
+        if 'slug' not in validated_data or not validated_data.get('slug'):
+            from django.utils.text import slugify
+            validated_data['slug'] = slugify(validated_data['name'])
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        # Auto-update slug if name changes
+        if 'name' in validated_data and validated_data['name'] != instance.name:
+            from django.utils.text import slugify
+            validated_data['slug'] = slugify(validated_data['name'])
+        return super().update(instance, validated_data)
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

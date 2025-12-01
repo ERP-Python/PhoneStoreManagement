@@ -35,6 +35,7 @@ import {
 import api from '../../api/axios'
 import Notification from '../../components/Notification/Notification'
 import { brandsStyles } from './Brands.styles'
+import BrandDetailModal from './BrandDetailModal'
 
 export default function Brands() {
   const [brands, setBrands] = useState([])
@@ -46,6 +47,8 @@ export default function Brands() {
   const [totalCount, setTotalCount] = useState(0)
   const [formOpen, setFormOpen] = useState(false)
   const [selectedBrand, setSelectedBrand] = useState(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [selectedBrandForDetail, setSelectedBrandForDetail] = useState(null)
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' })
   const [formData, setFormData] = useState({
     name: '',
@@ -143,6 +146,11 @@ export default function Brands() {
     }
   }
 
+  const handleViewDetail = (brand) => {
+    setSelectedBrandForDetail(brand)
+    setDetailModalOpen(true)
+  }
+
   const handleFormSubmit = async () => {
     try {
       const formDataToSend = new FormData()
@@ -155,18 +163,14 @@ export default function Brands() {
       }
 
       if (selectedBrand) {
-        await api.patch(`/brands/${selectedBrand.id}/`, formDataToSend, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.patch(`/brands/${selectedBrand.id}/`, formDataToSend)
         setNotification({
           open: true,
           message: 'Cập nhật thương hiệu thành công',
           severity: 'success'
         })
       } else {
-        await api.post('/brands/', formDataToSend, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.post('/brands/', formDataToSend)
         setNotification({
           open: true,
           message: 'Thêm thương hiệu thành công',
@@ -285,7 +289,18 @@ export default function Brands() {
                         )}
                       </TableCell>
                       <TableCell sx={brandsStyles.tableCell}>
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            color: '#667eea',
+                            '&:hover': {
+                              textDecoration: 'underline'
+                            }
+                          }}
+                          onClick={() => handleViewDetail(brand)}
+                        >
                           {brand.name}
                         </Typography>
                       </TableCell>
@@ -393,6 +408,12 @@ export default function Brands() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <BrandDetailModal
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        brand={selectedBrandForDetail}
+      />
 
       <Notification
         open={notification.open}
