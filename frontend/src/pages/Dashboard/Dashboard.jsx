@@ -49,11 +49,13 @@ const styles = {
   },
   statCard: {
     height: '100%',
+    minHeight: 140,
     borderRadius: 3,
     boxShadow: '0px 2px 10px rgba(0,0,0,0.03)',
     transition: 'transform 0.2s',
-    width: 'fit-content',
-    minWidth: '250px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
     '&:hover': {
       transform: 'translateY(-4px)',
       boxShadow: '0px 8px 20px rgba(0,0,0,0.06)',
