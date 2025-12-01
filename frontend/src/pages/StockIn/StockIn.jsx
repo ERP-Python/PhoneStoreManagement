@@ -285,55 +285,117 @@ export default function StockIn() {
 
   return (
     <Box sx={stockInStyles.container}>
-      <Paper elevation={0} sx={stockInStyles.header}>
-        <Box sx={stockInStyles.headerContent}>
-          <Box>
-            <Typography variant="h5" sx={stockInStyles.title}>
-              Nhập kho
-            </Typography>
-            <Typography variant="body2" sx={stockInStyles.subtitle}>
-              Quản lý phiếu nhập kho sản phẩm
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddNew}
-            sx={stockInStyles.addButton}
-          >
-            Tạo phiếu nhập kho
-          </Button>
-        </Box>
-      </Paper>
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            m: 0,
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            lineHeight: 1.4,
+            fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            color: '#1e293b' 
+          }}
+        >
+          Nhập kho
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+          Quản lý phiếu nhập kho và lịch sử nhập hàng
+        </Typography>
+      </Box>
 
-      <Paper elevation={0} sx={stockInStyles.contentPaper}>
-        <Box sx={stockInStyles.toolbarContainer}>
-          <TextField
-            placeholder="Tìm kiếm phiếu nhập kho..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            sx={stockInStyles.searchField}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={stockInStyles.searchIcon} />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Button
-            variant="outlined"
-            startIcon={<SearchIcon />}
-            onClick={handleSearch}
-            sx={stockInStyles.searchButton}
-          >
-            Tìm kiếm
-          </Button>
-          <IconButton onClick={fetchStockIns} sx={stockInStyles.iconButton}>
-            <RefreshIcon />
-          </IconButton>
-        </Box>
+      <Paper elevation={0} sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2, borderRadius: 2, border: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+        <TextField
+          placeholder="Tìm kiếm phiếu nhập kho..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          size="small"
+          sx={{ 
+            flex: 1,
+            minWidth: '200px',
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              '& fieldset': {
+                borderColor: '#e2e8f0',
+              },
+              '&:hover fieldset': {
+                borderColor: '#cbd5e1',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#667eea',
+              }
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: '#94a3b8' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+        
+        <Button
+          variant="contained"
+          onClick={handleSearch}
+          sx={{ 
+            backgroundColor: '#667eea',
+            color: '#fff',
+            height: 40,
+            px: 3,
+            borderRadius: 1,
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#5a67d8',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }
+          }}
+        >
+          Tìm kiếm
+        </Button>
+
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={handleAddNew}
+          sx={{
+            height: 40,
+            px: 2,
+            borderRadius: 1,
+            borderColor: '#667eea',
+            color: '#667eea',
+            textTransform: 'none',
+            whiteSpace: 'nowrap',
+            '&:hover': {
+              borderColor: '#5a67d8',
+              backgroundColor: 'rgba(102, 126, 234, 0.04)'
+            },
+          }}
+        >
+          Tạo phiếu nhập kho
+        </Button>
+
+        <IconButton 
+          onClick={fetchStockIns} 
+          sx={{ 
+            border: '1px solid #e2e8f0',
+            borderRadius: 1,
+            color: '#64748b',
+            height: 40,
+            width: 40,
+            '&:hover': {
+              backgroundColor: '#f8f9fa',
+              color: '#667eea',
+              borderColor: '#667eea'
+            }
+          }}
+        >
+          <RefreshIcon />
+        </IconButton>
+      </Paper>
 
         {error && (
           <Alert severity="error" sx={stockInStyles.alert}>{error}</Alert>
@@ -345,7 +407,7 @@ export default function StockIn() {
           </Box>
         ) : (
           <>
-            <TableContainer>
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
               <Table>
                 <TableHead>
                   <TableRow>
@@ -404,7 +466,7 @@ export default function StockIn() {
             />
           </>
         )}
-      </Paper>
+
 
       {/* Create Form Dialog */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="md" fullWidth>
