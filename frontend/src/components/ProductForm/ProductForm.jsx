@@ -22,7 +22,12 @@ import {
   Autocomplete,
   InputAdornment
 } from '@mui/material'
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  CloudUpload as CloudUploadIcon,
+  Image as ImageIcon
+} from '@mui/icons-material'
 import api from '../../api/axios'
 import { productFormStyles } from './ProductForm.styles'
 
@@ -36,13 +41,14 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
     is_active: true
   })
   const [variants, setVariants] = useState([
-    { ram: '', rom: '', color: '', sku: '', price: '', is_active: true }
+    { ram: '', rom: '', color: '', sku: '', price: '', is_active: true, images: [], uploadedImages: [] }
   ])
   const [brands, setBrands] = useState([])
   const [productSuggestions, setProductSuggestions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState({})
+  const [uploadingImages, setUploadingImages] = useState(false)
 
   // Utility function to get first character of color and uppercase it
   const getColorCode = (color) => {
@@ -80,7 +86,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           description: product.description || '',
           is_active: product.is_active !== undefined ? product.is_active : true
         })
-        
+
         // Load variants if available
         if (product.variants && product.variants.length > 0) {
           setVariants(product.variants.map(v => ({
@@ -92,10 +98,12 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             price: v.price || '',
             displayPrice: formatPrice(v.price || ''),
             is_active: v.is_active !== undefined ? v.is_active : true,
-            skuManuallySet: true // SKU from DB is considered manually set
+            skuManuallySet: true, // SKU from DB is considered manually set
+            images: v.images || [],
+            uploadedImages: []
           })))
         } else {
-          setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true }])
+          setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true, images: [], uploadedImages: [] }])
         }
       } else {
         // Add mode - reset form
@@ -107,7 +115,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           description: '',
           is_active: true
         })
-        setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true }])
+        setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true, images: [], uploadedImages: [] }])
         setProductSuggestions([])
       }
       setError(null)
@@ -237,7 +245,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target
     const newValue = type === 'checkbox' ? checked : value
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: newValue
@@ -270,7 +278,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
 
   const handleVariantChange = (index, field, value) => {
     const newVariants = [...variants]
-    
+
     // Handle price separately to format it
     if (field === 'price') {
       const rawValue = parsePrice(value)
@@ -282,20 +290,20 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
       // Validate variant field
       validateField(field, value, index)
     }
-    
+
     // If user is manually editing SKU field, mark it as manually set
     if (field === 'sku') {
       newVariants[index].skuManuallySet = true
     }
-    
+
     // Auto-generate SKU only if:
     // 1. It's a new variant (no id from DB)
     // 2. AND user hasn't manually set the SKU
     // 3. AND we're changing ram/rom/color fields
-    if (['ram', 'rom', 'color'].includes(field) && 
-        formData.sku && 
-        !newVariants[index].id && 
-        !newVariants[index].skuManuallySet) {
+    if (['ram', 'rom', 'color'].includes(field) &&
+      formData.sku &&
+      !newVariants[index].id &&
+      !newVariants[index].skuManuallySet) {
       const v = newVariants[index]
       if (v.ram || v.rom || v.color) {
         const parts = [formData.sku]
@@ -305,18 +313,18 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
         newVariants[index].sku = parts.join('-')
       }
     }
-    
+
     setVariants(newVariants)
   }
 
   const handleAddVariant = () => {
-    setVariants([...variants, { ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true }])
+    setVariants([...variants, { ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true, images: [], uploadedImages: [] }])
   }
 
   const handleRemoveVariant = (index) => {
     if (variants.length > 1) {
       setVariants(variants.filter((_, i) => i !== index))
-      
+
       // Remove validation errors for this variant
       const newErrors = { ...validationErrors }
       Object.keys(newErrors).forEach(key => {
@@ -325,6 +333,70 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
         }
       })
       setValidationErrors(newErrors)
+    }
+  }
+
+  const handleImageSelect = (index, event) => {
+    const files = Array.from(event.target.files)
+    if (files.length === 0) return
+
+    const newVariants = [...variants]
+
+    // Store files for upload
+    newVariants[index].uploadedImages = files
+
+    // Create preview URLs
+    const previewUrls = files.map(file => URL.createObjectURL(file))
+    newVariants[index].imagePreviews = previewUrls
+
+    setVariants(newVariants)
+  }
+
+  const handleRemoveImage = async (variantIndex, imageId) => {
+    const variant = variants[variantIndex]
+
+    // If variant has an ID, delete from server
+    if (variant.id) {
+      try {
+        // Extract image number from imageId (format: productId_variantId_imageNumber)
+        const imageNumber = imageId.split('_')[2]?.split('.')[0]
+
+        if (imageNumber) {
+          await api.delete(`/products/variants/${variant.id}/delete_image/`, {
+            data: { image_number: imageNumber }
+          })
+        }
+      } catch (err) {
+        console.error('Error deleting image:', err)
+        setError('Không thể xóa ảnh. Vui lòng thử lại.')
+        return
+      }
+    }
+
+    // Remove from local state
+    const newVariants = [...variants]
+    newVariants[variantIndex].images = newVariants[variantIndex].images.filter(img => img.id !== imageId)
+    setVariants(newVariants)
+  }
+
+  const uploadVariantImages = async (variantId, files) => {
+    if (!files || files.length === 0) return
+
+    const formData = new FormData()
+    files.forEach(file => {
+      formData.append('images', file)
+    })
+
+    try {
+      const response = await api.post(`/products/variants/${variantId}/upload_images/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return response.data
+    } catch (err) {
+      console.error('Error uploading images:', err)
+      throw err
     }
   }
 
@@ -395,7 +467,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     // Validate form before submitting
     if (!validateForm()) {
       setError('Vui lòng kiểm tra lại các trường thông tin')
@@ -417,7 +489,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
       if (product) {
         // Update product
         await api.put(`/products/${product.id}/`, formData)
-        
+
         // Update/Create/Delete variants
         for (const variant of validVariants) {
           const variantData = {
@@ -429,22 +501,35 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             price: parseFloat(variant.price),
             is_active: variant.is_active
           }
-          
+
+          let variantId = variant.id
+
           if (variant.id) {
             // Update existing variant
             await api.put(`/products/variants/${variant.id}/`, variantData)
           } else {
             // Create new variant
-            await api.post('/products/variants/', variantData)
+            const response = await api.post('/products/variants/', variantData)
+            variantId = response.data.id
+          }
+
+          // Upload images if any
+          if (variant.uploadedImages && variant.uploadedImages.length > 0) {
+            try {
+              await uploadVariantImages(variantId, variant.uploadedImages)
+            } catch (err) {
+              console.error('Error uploading images for variant:', err)
+              setError(`Đã lưu biến thể nhưng không thể upload ảnh cho ${variant.sku}`)
+            }
           }
         }
-        
+
         onSuccess('Cập nhật sản phẩm và biến thể thành công!')
       } else {
         // Create product first
         const productResponse = await api.post('/products/', formData)
         const productId = productResponse.data.id
-        
+
         // Then create variants
         for (const variant of validVariants) {
           const variantData = {
@@ -456,9 +541,20 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             price: parseFloat(variant.price),
             is_active: variant.is_active
           }
-          await api.post('/products/variants/', variantData)
+          const variantResponse = await api.post('/products/variants/', variantData)
+          const variantId = variantResponse.data.id
+
+          // Upload images if any
+          if (variant.uploadedImages && variant.uploadedImages.length > 0) {
+            try {
+              await uploadVariantImages(variantId, variant.uploadedImages)
+            } catch (err) {
+              console.error('Error uploading images for variant:', err)
+              setError(`Đã tạo sản phẩm nhưng không thể upload ảnh cho ${variant.sku}`)
+            }
+          }
         }
-        
+
         onSuccess('Thêm sản phẩm và biến thể thành công!')
       }
       onClose()
@@ -699,6 +795,135 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
                   >
                     <DeleteIcon />
                   </IconButton>
+                </Grid>
+
+                {/* Image Upload Section */}
+                <Grid item xs={12}>
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ImageIcon fontSize="small" />
+                      Hình ảnh biến thể
+                    </Typography>
+
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUploadIcon />}
+                      size="small"
+                      sx={{ mb: 1 }}
+                    >
+                      Chọn ảnh
+                      <input
+                        type="file"
+                        hidden
+                        multiple
+                        accept="image/jpeg,image/jpg"
+                        onChange={(e) => handleImageSelect(index, e)}
+                      />
+                    </Button>
+
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      Chọn nhiều ảnh định dạng JPG (ảnh sẽ được lưu theo thứ tự 1.jpg, 2.jpg,...)
+                    </Typography>
+
+                    {/* Image Previews */}
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {/* Existing images from server */}
+                      {variant.images && variant.images.length > 0 && variant.images.map((img) => (
+                        <Box
+                          key={img.id}
+                          sx={{
+                            position: 'relative',
+                            width: 80,
+                            height: 80,
+                            border: '1px solid #e0e0e0',
+                            borderRadius: 1,
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <img
+                            src={img.image}
+                            alt={`Image ${img.sort_order}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                          {img.is_primary && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 2,
+                                left: 2,
+                                backgroundColor: 'primary.main',
+                                color: 'white',
+                                px: 0.5,
+                                py: 0.25,
+                                fontSize: '0.6rem',
+                                borderRadius: 0.5
+                              }}
+                            >
+                              Chính
+                            </Box>
+                          )}
+                          <IconButton
+                            size="small"
+                            sx={{
+                              position: 'absolute',
+                              top: 2,
+                              right: 2,
+                              backgroundColor: 'rgba(255,255,255,0.8)',
+                              '&:hover': { backgroundColor: 'rgba(255,255,255,0.95)' }
+                            }}
+                            onClick={() => handleRemoveImage(index, img.id)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ))}
+
+                      {/* Preview new uploaded images */}
+                      {variant.imagePreviews && variant.imagePreviews.length > 0 && variant.imagePreviews.map((preview, imgIdx) => (
+                        <Box
+                          key={`preview-${imgIdx}`}
+                          sx={{
+                            position: 'relative',
+                            width: 80,
+                            height: 80,
+                            border: '2px dashed #667eea',
+                            borderRadius: 1,
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <img
+                            src={preview}
+                            alt={`Preview ${imgIdx + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              bottom: 2,
+                              left: 2,
+                              backgroundColor: 'success.main',
+                              color: 'white',
+                              px: 0.5,
+                              py: 0.25,
+                              fontSize: '0.6rem',
+                              borderRadius: 0.5
+                            }}
+                          >
+                            Mới
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
                 </Grid>
               </Grid>
             </Paper>

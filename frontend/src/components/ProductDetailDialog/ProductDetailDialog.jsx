@@ -259,14 +259,6 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                             })}
                                             {images.length > thumbnailStartIndex + 4 && (
                                                 <Box
-                                                    onClick={() => {
-                                                        const nextStart = thumbnailStartIndex + 4
-                                                        if (nextStart >= images.length) {
-                                                            setThumbnailStartIndex(0)
-                                                        } else {
-                                                            setThumbnailStartIndex(nextStart)
-                                                        }
-                                                    }}
                                                     sx={{
                                                         width: 60,
                                                         height: 60,
