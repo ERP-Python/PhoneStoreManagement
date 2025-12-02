@@ -48,7 +48,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -84,7 +83,7 @@ DATABASES = {
         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
         'NAME': os.getenv('DB_NAME', 'phone_store'),
         'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', '12345'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
@@ -122,9 +121,13 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 
-# Media files (User uploads)
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Media files (User uploads) - Lưu vào thư mục assets
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'apps' / 'assets'
+
+# Assets directory for product images
+ASSETS_URL = '/assets/'
+ASSETS_ROOT = BASE_DIR / 'apps' / 'assets'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -150,7 +153,7 @@ REST_FRAMEWORK = {
 # CORS Settings
 CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://localhost:5173'
+    'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173'
 ).split(',')
 
 CORS_ALLOW_CREDENTIALS = True
@@ -158,7 +161,7 @@ CORS_ALLOW_CREDENTIALS = True
 # CSRF Settings
 CSRF_TRUSTED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://localhost:5173'
+    'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173'
 ).split(',')
 
 # Session Settings
@@ -171,11 +174,16 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# VNPay Configuration
-VNPAY_TMN_CODE = os.getenv('VNPAY_TMN_CODE', '')
-VNPAY_HASH_SECRET = os.getenv('VNPAY_HASH_SECRET', '')
-VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', 'http://localhost:8000/api/payments/vnpay/return')
-VNPAY_PAYMENT_URL = os.getenv('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
+# VNPay Configuration - Sandbox
+# Merchant Account: anhkhoa.271103@gmail.com
+# Dashboard: https://sandbox.vnpayment.vn/merchantv2/
+VNPAY_TMN_CODE = 'P53XLHZ9'  # HARD-CODED - Do not use os.getenv for now
+VNPAY_HASH_SECRET_KEY = '5FGUW228ZOY6NG92F0FVI3TDHB3FYRQ3'  # HARD-CODED
+VNPAY_RETURN_URL = 'http://localhost:8000/api/payments/vnpay/return/'
+VNPAY_PAYMENT_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'
+
+# Legacy support for old variable name
+VNPAY_HASH_SECRET = VNPAY_HASH_SECRET_KEY
 
 # Custom Settings
 ENABLE_IMEI_TRACKING = os.getenv('ENABLE_IMEI_TRACKING', 'False') == 'True'

@@ -33,20 +33,37 @@ export default function OrderForm({ open, onClose, onSuccess }) {
   const [items, setItems] = useState([{ product_variant: null, qty: 1, unit_price: 0, available_stock: 0 }])
   const [customers, setCustomers] = useState([])
   const [productVariants, setProductVariants] = useState([])
+  const [allProductVariants, setAllProductVariants] = useState([])
+  const [brands, setBrands] = useState([])
+  const [selectedBrand, setSelectedBrand] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     if (open) {
       fetchCustomers()
+      fetchBrands()
       fetchProductVariants()
       // Generate order code
       const code = 'ORD-' + Date.now().toString().slice(-8)
       setFormData(prev => ({ ...prev, code }))
       setItems([{ product_variant: null, qty: 1, unit_price: 0, available_stock: 0 }])
+      setSelectedBrand('')
       setError(null)
     }
   }, [open])
+
+  // Filter variants when brand changes
+  useEffect(() => {
+    if (selectedBrand) {
+      const filtered = allProductVariants.filter(
+        variant => variant.product_detail?.brand?.id === selectedBrand
+      )
+      setProductVariants(filtered)
+    } else {
+      setProductVariants(allProductVariants)
+    }
+  }, [selectedBrand, allProductVariants])
 
   const fetchCustomers = async () => {
     try {
@@ -57,10 +74,24 @@ export default function OrderForm({ open, onClose, onSuccess }) {
     }
   }
 
+  const fetchBrands = async () => {
+    try {
+      const response = await api.get('/brands/')
+      setBrands(response.data.results || response.data)
+    } catch (err) {
+      console.error('Error fetching brands:', err)
+    }
+  }
+
   const fetchProductVariants = async () => {
     try {
-      const response = await api.get('/products/variants/')
-      setProductVariants(response.data.results || response.data)
+      // Add timestamp to ensure fresh data from database
+      const timestamp = new Date().getTime()
+      const response = await api.get(`/products/variants/?_t=${timestamp}`)
+      const variants = response.data.results || response.data
+      console.log(`Fetched ${variants.length} variants with current stock from database`)
+      setAllProductVariants(variants)
+      setProductVariants(variants)
     } catch (err) {
       console.error('Error fetching variants:', err)
     }
@@ -71,30 +102,18 @@ export default function OrderForm({ open, onClose, onSuccess }) {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleItemChange = async (index, field, value) => {
+  const handleItemChange = (index, field, value) => {
     const newItems = [...items]
     newItems[index][field] = value
 
-    // If product variant changed, fetch stock info and set price
+    // If product variant changed, set price and stock from variant data
     if (field === 'product_variant' && value) {
       const variant = productVariants.find(v => v.id === value)
       if (variant) {
         newItems[index].unit_price = variant.price
-        
-        // Fetch current stock
-        try {
-          const response = await api.get(`/inventory/?product_variant=${value}`)
-          const inventoryData = response.data.results || response.data
-          if (inventoryData.length > 0) {
-            const availableStock = inventoryData[0].on_hand - (inventoryData[0].reserved || 0)
-            newItems[index].available_stock = Math.max(0, availableStock)
-          } else {
-            newItems[index].available_stock = 0
-          }
-        } catch (err) {
-          console.error('Error fetching stock:', err)
-          newItems[index].available_stock = 0
-        }
+        // Use current_stock from variant (fetched from database)
+        newItems[index].available_stock = variant.current_stock || 0
+        console.log(`Stock for variant ${value} (${variant.product_detail?.name}):`, variant.current_stock)
       }
     }
 
@@ -170,8 +189,12 @@ export default function OrderForm({ open, onClose, onSuccess }) {
       }
 
       await api.post('/orders/', orderData)
+
       onSuccess('Tạo đơn hàng thành công!')
       onClose()
+
+      // Refresh product variants to get updated inventory for next order
+      await fetchProductVariants()
     } catch (err) {
       console.error('Error creating order:', err)
       setError(err.response?.data?.detail || err.response?.data?.error || 'Có lỗi xảy ra khi tạo đơn hàng')
@@ -248,6 +271,26 @@ export default function OrderForm({ open, onClose, onSuccess }) {
 
             <Grid item xs={12}>
               <Divider sx={orderFormStyles.divider} />
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Lọc theo thương hiệu</InputLabel>
+                  <Select
+                    value={selectedBrand}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                    label="Lọc theo thương hiệu"
+                  >
+                    <MenuItem value="">Tất cả thương hiệu</MenuItem>
+                    {brands.map(brand => (
+                      <MenuItem key={brand.id} value={brand.id}>
+                        {brand.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12}>
               <Box sx={orderFormStyles.itemsHeader}>
                 <Typography {...orderFormStyles.itemsTitle}>Sản phẩm</Typography>
                 <Button startIcon={<AddIcon />} onClick={handleAddItem} variant="outlined">
@@ -259,7 +302,7 @@ export default function OrderForm({ open, onClose, onSuccess }) {
                 const itemTotal = calculateItemTotal(item)
                 const isLowStock = item.available_stock > 0 && item.available_stock <= 10
                 const isOutOfStock = item.available_stock === 0
-                
+
                 return (
                   <Box key={index} sx={orderFormStyles.itemBox}>
                     <Grid container spacing={orderFormStyles.gridSpacing} alignItems="center">
@@ -286,7 +329,7 @@ export default function OrderForm({ open, onClose, onSuccess }) {
                           />
                         </FormControl>
                       </Grid>
-                      
+
                       <Grid item xs={6} sm={2}>
                         <TextField
                           fullWidth
@@ -334,24 +377,24 @@ export default function OrderForm({ open, onClose, onSuccess }) {
                         <Grid item xs={12}>
                           <Box sx={orderFormStyles.stockChipBox}>
                             {isOutOfStock ? (
-                              <Chip 
-                                icon={<WarningIcon />} 
-                                label="Hết hàng" 
-                                color="error" 
-                                size="small" 
+                              <Chip
+                                icon={<WarningIcon />}
+                                label="Hết hàng"
+                                color="error"
+                                size="small"
                               />
                             ) : isLowStock ? (
-                              <Chip 
-                                icon={<WarningIcon />} 
-                                label={`Còn ${item.available_stock} sản phẩm`} 
-                                color="warning" 
-                                size="small" 
+                              <Chip
+                                icon={<WarningIcon />}
+                                label={`Còn ${item.available_stock} sản phẩm`}
+                                color="warning"
+                                size="small"
                               />
                             ) : (
-                              <Chip 
-                                label={`Còn ${item.available_stock} sản phẩm`} 
-                                color="success" 
-                                size="small" 
+                              <Chip
+                                label={`Còn ${item.available_stock} sản phẩm`}
+                                color="success"
+                                size="small"
                               />
                             )}
                           </Box>

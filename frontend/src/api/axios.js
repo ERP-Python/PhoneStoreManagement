@@ -1,10 +1,13 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: '/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   },
 })
 
@@ -18,6 +21,11 @@ api.interceptors.request.use(
     
     if (csrfToken) {
       config.headers['X-CSRFToken'] = csrfToken
+    }
+    
+    // Don't set Content-Type for FormData, let browser set it with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
     }
     
     return config

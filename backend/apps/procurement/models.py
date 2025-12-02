@@ -1,11 +1,11 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from apps.catalog.models import ProductVariant
 
 
 class Supplier(models.Model):
-    """Supplier model"""
     name = models.CharField(max_length=200)
     contact = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
@@ -27,22 +27,21 @@ class Supplier(models.Model):
 
 
 class PurchaseOrder(models.Model):
-    """Purchase Order model"""
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('approved', 'Approved'),
         ('cancelled', 'Cancelled'),
     ]
-    
+
     code = models.CharField(max_length=50, unique=True, db_index=True)
     supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name='purchase_orders')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     note = models.TextField(blank=True, null=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_pos')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_pos')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    approved_at = models.DateTimeField(blank=True, null=True)
-    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_pos')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_pos')
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'purchase_orders'
@@ -59,13 +58,12 @@ class PurchaseOrder(models.Model):
 
     @property
     def total_amount(self):
-        return sum(item.line_total for item in self.items.all() if item.line_total)
+        return sum(item.line_total for item in self.items.all())
 
 
 class POItem(models.Model):
-    """Purchase Order Item model"""
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='items')
-    product_variant = models.ForeignKey('catalog.ProductVariant', on_delete=models.PROTECT)
+    product_variant = models.ForeignKey(ProductVariant, on_delete=models.PROTECT)
     qty = models.IntegerField(validators=[MinValueValidator(1)])
     unit_cost = models.DecimalField(max_digits=12, decimal_places=0, validators=[MinValueValidator(Decimal('0'))])
 
@@ -75,27 +73,24 @@ class POItem(models.Model):
         verbose_name_plural = 'PO Items'
 
     def __str__(self):
-        return f"{self.purchase_order.code} - {self.product_variant}"
+        return f"{self.product_variant} x {self.qty}"
 
     @property
     def line_total(self):
-        if self.qty is not None and self.unit_cost is not None:
-            return self.qty * self.unit_cost
-        return Decimal('0')
+        return self.qty * self.unit_cost
 
 
 class StockIn(models.Model):
-    """Stock In / Goods Receipt model"""
     SOURCE_CHOICES = [
         ('PO', 'From Purchase Order'),
         ('MANUAL', 'Manual Entry'),
     ]
-    
+
     code = models.CharField(max_length=50, unique=True, db_index=True)
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='MANUAL')
-    reference_id = models.IntegerField(blank=True, null=True)  # PO ID if from PO
+    reference_id = models.IntegerField(null=True, blank=True)
     note = models.TextField(blank=True, null=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_stock_ins')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_stock_ins')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -113,9 +108,8 @@ class StockIn(models.Model):
 
 
 class StockInItem(models.Model):
-    """Stock In Item model"""
     stock_in = models.ForeignKey(StockIn, on_delete=models.CASCADE, related_name='items')
-    product_variant = models.ForeignKey('catalog.ProductVariant', on_delete=models.PROTECT)
+    product_variant = models.ForeignKey(ProductVariant, on_delete=models.PROTECT)
     qty = models.IntegerField(validators=[MinValueValidator(1)])
     unit_cost = models.DecimalField(max_digits=12, decimal_places=0, validators=[MinValueValidator(Decimal('0'))])
 
@@ -125,10 +119,9 @@ class StockInItem(models.Model):
         verbose_name_plural = 'Stock In Items'
 
     def __str__(self):
-        return f"{self.stock_in.code} - {self.product_variant}"
+        return f"{self.product_variant} x {self.qty}"
 
     @property
     def line_total(self):
-        if self.qty is not None and self.unit_cost is not None:
-            return self.qty * self.unit_cost
-        return Decimal('0') 
+        return self.qty * self.unit_cost
+

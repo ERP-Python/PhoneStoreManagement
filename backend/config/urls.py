@@ -28,6 +28,7 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.ASSETS_URL, document_root=settings.ASSETS_ROOT)
 
 # Customize admin site
 admin.site.site_header = "Phone Store Management"

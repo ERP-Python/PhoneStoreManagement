@@ -17,6 +17,7 @@ from .serializers import (
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_protect
 def login_view(request):
     """
     Login endpoint using Django session authentication
@@ -34,6 +35,7 @@ def login_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_protect
 def logout_view(request):
     """
     Logout endpoint

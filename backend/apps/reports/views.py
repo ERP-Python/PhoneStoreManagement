@@ -227,9 +227,13 @@ def top_products(request):
 def dashboard_stats(request):
     """
     Dashboard overview statistics
+    Query params: low_stock_threshold (default 10)
     """
     today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     this_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Get low stock threshold from query params or use default
+    low_stock_threshold = int(request.query_params.get('low_stock_threshold', 10))
     
     # Today's stats
     today_orders = Order.objects.filter(created_at__gte=today)
@@ -241,8 +245,42 @@ def dashboard_stats(request):
     
     # Inventory stats
     total_products = Product.objects.filter(is_active=True).count()
-    low_stock_items = Inventory.objects.filter(on_hand__lte=10, on_hand__gt=0).count()
-    out_of_stock_items = Inventory.objects.filter(on_hand=0).count()
+    total_variants = ProductVariant.objects.filter(is_active=True).count()
+    
+    # Get low stock items with details
+    low_stock_items = Inventory.objects.filter(
+        on_hand__lte=low_stock_threshold, 
+        on_hand__gt=0
+    ).select_related('product_variant__product__brand')
+    
+    out_of_stock_items = Inventory.objects.filter(on_hand=0).select_related(
+        'product_variant__product__brand'
+    )
+    
+    # Prepare low stock alert details
+    low_stock_details = [
+        {
+            'id': item.id,
+            'product_name': item.product_variant.product.name,
+            'variant_sku': item.product_variant.sku,
+            'brand': item.product_variant.product.brand.name,
+            'on_hand': item.on_hand,
+            'status': 'low_stock'
+        }
+        for item in low_stock_items[:10]  # Limit to top 10 for dashboard
+    ]
+    
+    out_of_stock_details = [
+        {
+            'id': item.id,
+            'product_name': item.product_variant.product.name,
+            'variant_sku': item.product_variant.sku,
+            'brand': item.product_variant.product.brand.name,
+            'on_hand': 0,
+            'status': 'out_of_stock'
+        }
+        for item in out_of_stock_items[:10]  # Limit to top 10 for dashboard
+    ]
     
     # Customer stats
     total_customers = Customer.objects.filter(is_active=True).count()
@@ -261,8 +299,12 @@ def dashboard_stats(request):
         },
         'inventory': {
             'total_products': total_products,
-            'low_stock_count': low_stock_items,
-            'out_of_stock_count': out_of_stock_items
+            'total_variants': total_variants,
+            'low_stock_count': low_stock_items.count(),
+            'out_of_stock_count': out_of_stock_items.count(),
+            'low_stock_threshold': low_stock_threshold,
+            'low_stock_items': low_stock_details,
+            'out_of_stock_items': out_of_stock_details
         },
         'customers': {
             'total_count': total_customers
@@ -318,4 +360,324 @@ def stock_movements_report(request):
             }
             for m in movements.order_by('-created_at')[:100]
         ]
-    }) 
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def daily_revenue_chart(request):
+    """
+    Daily revenue chart data for last N days
+    Query params: days (default 7)
+    """
+    from apps.reports.models import RevenueStats
+    from datetime import date
+    
+    days = int(request.query_params.get('days', 7))
+    today = date.today()
+    
+    # Get revenue stats for the last N days
+    chart_data = []
+    
+    for i in range(days - 1, -1, -1):
+        target_date = today - timedelta(days=i)
+        
+        # Try to get stats from RevenueStats first
+        try:
+            stats = RevenueStats.objects.get(date=target_date)
+            revenue = float(stats.total_revenue)
+            orders = stats.total_orders
+        except RevenueStats.DoesNotExist:
+            # Fallback: calculate from Order model
+            day_start = timezone.datetime.combine(target_date, timezone.datetime.min.time())
+            day_end = timezone.datetime.combine(target_date, timezone.datetime.max.time())
+            if timezone.is_aware(day_start):
+                day_start = timezone.make_aware(day_start)
+                day_end = timezone.make_aware(day_end)
+            
+            day_orders = Order.objects.filter(
+                created_at__gte=day_start,
+                created_at__lte=day_end,
+                status='paid'
+            )
+            revenue = float(day_orders.aggregate(total=Sum('total'))['total'] or 0)
+            orders = day_orders.count()
+        
+        # Format day name in Vietnamese
+        day_names = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
+        weekday = target_date.weekday()
+        day_name = day_names[weekday]
+        
+        chart_data.append({
+            'date': str(target_date),
+            'name': day_name,
+            'doanhthu': revenue,
+            'orders': orders,
+            'formatted_date': target_date.strftime('%d/%m')
+        })
+    
+    return Response({
+        'days': days,
+        'data': chart_data,
+        'total_revenue': sum(item['doanhthu'] for item in chart_data),
+        'total_orders': sum(item['orders'] for item in chart_data)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def monthly_revenue_chart(request):
+    """
+    Monthly revenue chart data for last N months
+    Query params: months (default 12)
+    """
+    from apps.reports.models import RevenueStats
+    from datetime import date
+    
+    months = int(request.query_params.get('months', 12))
+    today = date.today()
+    
+    # Get revenue stats for the last N months
+    chart_data = []
+    
+    for i in range(months - 1, -1, -1):
+        # Calculate target month
+        current_month = today.month - i
+        current_year = today.year
+        
+        # Handle year boundary
+        if current_month <= 0:
+            current_year -= 1
+            current_month += 12
+        
+        # Get first day and last day of the month
+        month_start = date(current_year, current_month, 1)
+        
+        # Get last day of month
+        if current_month == 12:
+            next_month_start = date(current_year + 1, 1, 1)
+        else:
+            next_month_start = date(current_year, current_month + 1, 1)
+        month_end = next_month_start - timedelta(days=1)
+        
+        # Calculate revenue for the month
+        month_start_dt = timezone.datetime.combine(month_start, timezone.datetime.min.time())
+        month_end_dt = timezone.datetime.combine(month_end, timezone.datetime.max.time())
+        
+        if timezone.is_aware(month_start_dt):
+            month_start_dt = timezone.make_aware(month_start_dt)
+            month_end_dt = timezone.make_aware(month_end_dt)
+        
+        month_orders = Order.objects.filter(
+            created_at__gte=month_start_dt,
+            created_at__lte=month_end_dt,
+            status='paid'
+        )
+        revenue = float(month_orders.aggregate(total=Sum('total'))['total'] or 0)
+        orders_count = month_orders.count()
+        
+        # Format month name in Vietnamese
+        month_names = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+                       'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
+        month_name = month_names[current_month - 1]
+        
+        chart_data.append({
+            'date': str(month_start),
+            'name': month_name,
+            'doanhthu': revenue,
+            'orders': orders_count,
+            'formatted_date': month_start.strftime('%m/%Y')
+        })
+    
+    return Response({
+        'months': months,
+        'data': chart_data,
+        'total_revenue': sum(item['doanhthu'] for item in chart_data),
+        'total_orders': sum(item['orders'] for item in chart_data)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def daily_stats(request):
+    """
+    Daily statistics for today
+    """
+    from datetime import date
+    
+    today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday = today - timedelta(days=1)
+    
+    # Today's stats
+    today_orders = Order.objects.filter(created_at__gte=today, status='paid')
+    today_revenue = today_orders.aggregate(total=Sum('total'))['total'] or 0
+    today_count = today_orders.count()
+    
+    # Yesterday's stats
+    yesterday_orders = Order.objects.filter(created_at__gte=yesterday, created_at__lt=today, status='paid')
+    yesterday_revenue = yesterday_orders.aggregate(total=Sum('total'))['total'] or 0
+    yesterday_count = yesterday_orders.count()
+    
+    return Response({
+        'revenue': float(today_revenue),
+        'orders_count': today_count,
+        'yesterday_revenue': float(yesterday_revenue),
+        'yesterday_orders_count': yesterday_count
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def monthly_stats(request):
+    """
+    Monthly statistics for current month
+    """
+    today = timezone.now()
+    current_month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Previous month
+    if current_month_start.month == 1:
+        previous_month_start = current_month_start.replace(year=current_month_start.year - 1, month=12)
+    else:
+        previous_month_start = current_month_start.replace(month=current_month_start.month - 1)
+    
+    # Current month stats
+    current_orders = Order.objects.filter(created_at__gte=current_month_start, status='paid')
+    current_revenue = current_orders.aggregate(total=Sum('total'))['total'] or 0
+    current_count = current_orders.count()
+    
+    # Previous month stats
+    previous_orders = Order.objects.filter(
+        created_at__gte=previous_month_start,
+        created_at__lt=current_month_start,
+        status='paid'
+    )
+    previous_revenue = previous_orders.aggregate(total=Sum('total'))['total'] or 0
+    previous_count = previous_orders.count()
+    
+    return Response({
+        'revenue': float(current_revenue),
+        'orders_count': current_count,
+        'previous_month_revenue': float(previous_revenue),
+        'previous_month_orders_count': previous_count
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def yearly_stats(request):
+    """
+    Yearly statistics for current year
+    """
+    today = timezone.now()
+    current_year_start = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    previous_year_start = current_year_start.replace(year=current_year_start.year - 1)
+    
+    # Current year stats
+    current_orders = Order.objects.filter(created_at__gte=current_year_start, status='paid')
+    current_revenue = current_orders.aggregate(total=Sum('total'))['total'] or 0
+    current_count = current_orders.count()
+    
+    # Previous year stats
+    previous_orders = Order.objects.filter(
+        created_at__gte=previous_year_start,
+        created_at__lt=current_year_start,
+        status='paid'
+    )
+    previous_revenue = previous_orders.aggregate(total=Sum('total'))['total'] or 0
+    previous_count = previous_orders.count()
+    
+    return Response({
+        'revenue': float(current_revenue),
+        'orders_count': current_count,
+        'previous_year_revenue': float(previous_revenue),
+        'previous_year_orders_count': previous_count
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recent_activities(request):
+    """
+    Get recent activities (orders, low stock warnings, customer registrations)
+    Query params: limit (default 10)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    limit = int(request.query_params.get('limit', 10))
+    now = timezone.now()
+    activities = []
+    
+    # Recent paid orders (last 7 days)
+    recent_orders = Order.objects.filter(
+        status='paid',
+        created_at__gte=now - timedelta(days=7)
+    ).order_by('-created_at')[:10]
+    
+    for order in recent_orders:
+        # Calculate time difference
+        time_diff = now - order.created_at
+        if time_diff.total_seconds() < 60:
+            time_str = 'Vừa xong'
+        elif time_diff.total_seconds() < 3600:
+            mins = int(time_diff.total_seconds() / 60)
+            time_str = f'{mins} phút trước'
+        elif time_diff.total_seconds() < 86400:
+            hours = int(time_diff.total_seconds() / 3600)
+            time_str = f'{hours} giờ trước'
+        else:
+            days = int(time_diff.total_seconds() / 86400)
+            time_str = f'{days} ngày trước'
+        
+        activities.append({
+            'action': f'Đơn hàng #{order.id} được thanh toán',
+            'time': time_str,
+            'type': 'order',
+            'timestamp': order.created_at
+        })
+    
+    # Low stock products (quantity < 10)
+    low_stock = Inventory.objects.filter(on_hand__lt=10).select_related('product_variant__product')[:10]
+    for inventory in low_stock:
+        activities.append({
+            'action': f'Sản phẩm "{inventory.product_variant.product.name}" sắp hết hàng ({inventory.on_hand} cái)',
+            'time': 'Đang theo dõi',
+            'type': 'low_stock',
+            'timestamp': inventory.updated_at
+        })
+    
+    # Recent new customers (last 7 days)
+    new_customers = Customer.objects.filter(
+        created_at__gte=now - timedelta(days=7)
+    ).order_by('-created_at')[:10]
+    
+    for customer in new_customers:
+        time_diff = now - customer.created_at
+        if time_diff.total_seconds() < 60:
+            time_str = 'Vừa xong'
+        elif time_diff.total_seconds() < 3600:
+            mins = int(time_diff.total_seconds() / 60)
+            time_str = f'{mins} phút trước'
+        elif time_diff.total_seconds() < 86400:
+            hours = int(time_diff.total_seconds() / 3600)
+            time_str = f'{hours} giờ trước'
+        else:
+            days = int(time_diff.total_seconds() / 86400)
+            time_str = f'{days} ngày trước'
+        
+        activities.append({
+            'action': f'Khách hàng mới: {customer.name}',
+            'time': time_str,
+            'type': 'customer',
+            'timestamp': customer.created_at
+        })
+    
+    # Sort by timestamp (newest first) and limit
+    activities = sorted(activities, key=lambda x: x['timestamp'], reverse=True)[:limit]
+    
+    # Remove timestamp from response
+    for activity in activities:
+        del activity['timestamp']
+    
+    return Response(activities)

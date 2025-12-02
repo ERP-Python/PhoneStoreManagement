@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'  // ← THÊM DÒNG NÀY
 import {
   Typography,
   Box,
@@ -22,6 +23,7 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material'
+import { useAlert } from '../../context/AlertContext'
 import {
   Add as AddIcon,
   Visibility as ViewIcon,
@@ -34,9 +36,14 @@ import api from '../../api/axios'
 import OrderForm from '../../components/OrderForm/OrderForm'
 import Notification from '../../components/Notification/Notification'
 import PaymentDialog from '../../components/PaymentDialog/PaymentDialog'
+import OrderDetailDialog from '../../components/OrderDetailDialog/OrderDetailDialog'
 import { ordersStyles, statusColors, statusLabels } from './Orders.styles'
 
 export default function Orders() {
+  const { showInfo } = useAlert()
+  const location = useLocation()
+  const navigate = useNavigate()
+  
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -49,6 +56,8 @@ export default function Orders() {
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' })
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState(null)
 
   const fetchOrders = async () => {
     try {
@@ -79,6 +88,30 @@ export default function Orders() {
       setLoading(false)
     }
   }
+
+  // Handle VNPay payment callback
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const paymentStatus = params.get('payment_status')
+    
+    if (paymentStatus === 'success') {
+      setNotification({
+        open: true,
+        message: '✅ Thanh toán VNPay thành công!',
+        severity: 'success'
+      })
+      fetchOrders()
+      navigate('/orders', { replace: true })
+    } else if (paymentStatus === 'failed') {
+      setNotification({
+        open: true,
+        message: '❌ Thanh toán VNPay thất bại. Vui lòng thử lại.',
+        severity: 'error'
+      })
+      fetchOrders()
+      navigate('/orders', { replace: true })
+    }
+  }, [location.search, navigate])
 
   useEffect(() => {
     fetchOrders()
@@ -138,6 +171,21 @@ export default function Orders() {
     setNotification({ open: true, message, severity: 'success' })
   }
 
+  const handleViewDetail = (order) => {
+    setSelectedOrderForDetail(order)
+    setDetailDialogOpen(true)
+  }
+
+  const handleDetailClose = () => {
+    setDetailDialogOpen(false)
+    setSelectedOrderForDetail(null)
+  }
+
+  const handlePrint = (order) => {
+    // TODO: Implement print functionality
+    showInfo(`In hóa đơn #${order.code}`)
+  }
+
   if (loading && orders.length === 0) {
     return (
       <Box sx={ordersStyles.loadingContainer}>
@@ -148,18 +196,23 @@ export default function Orders() {
 
   return (
     <Box>
-      <Box sx={ordersStyles.header}>
-        <Typography variant="h4">
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            m: 0,
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            lineHeight: 1.4,
+            fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            color: '#1e293b' 
+          }}
+        >
           Quản lý Đơn hàng
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleAdd}
-        >
-          Tạo đơn hàng
-        </Button>
+        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+          Quản lý danh sách đơn hàng và thanh toán
+        </Typography>
       </Box>
 
       {error && (
@@ -168,57 +221,136 @@ export default function Orders() {
         </Alert>
       )}
 
-      <Paper sx={ordersStyles.searchPaper}>
-        <Box sx={ordersStyles.searchBox}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Tìm kiếm theo mã đơn, tên khách hàng..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={handleSearchKeyPress}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
+      <Paper elevation={0} sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2, borderRadius: 2, border: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+        <TextField
+          placeholder="Tìm kiếm theo mã đơn, tên khách hàng..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={handleSearchKeyPress}
+          size="small"
+          sx={{ 
+            flex: 1,
+            minWidth: '200px',
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              '& fieldset': {
+                borderColor: '#e2e8f0',
+              },
+              '&:hover fieldset': {
+                borderColor: '#cbd5e1',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#667eea',
+              }
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: '#94a3b8' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <Select
+            value={statusFilter}
+            displayEmpty
+            onChange={(e) => {
+              setStatusFilter(e.target.value)
+              setPage(0)
             }}
-          />
-          <FormControl size="small" sx={ordersStyles.filterControl}>
-            <InputLabel>Trạng thái</InputLabel>
-            <Select
-              value={statusFilter}
-              label="Trạng thái"
-              onChange={(e) => {
-                setStatusFilter(e.target.value)
-                setPage(0)
-              }}
-            >
-              <MenuItem value="">Tất cả</MenuItem>
-              <MenuItem value="pending">Chờ thanh toán</MenuItem>
-              <MenuItem value="paid">Đã thanh toán</MenuItem>
-              <MenuItem value="cancelled">Đã hủy</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            variant="contained"
-            onClick={handleSearch}
-            startIcon={<SearchIcon />}
+            sx={{
+              backgroundColor: '#fff',
+              borderRadius: 1,
+              height: 40,
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#e2e8f0',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#cbd5e1',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#667eea',
+              }
+            }}
           >
-            Tìm
-          </Button>
-          <IconButton onClick={fetchOrders} color="primary">
-            <RefreshIcon />
-          </IconButton>
-        </Box>
+            <MenuItem value="">
+              <span style={{ color: '#94a3b8' }}>Trạng thái</span>
+            </MenuItem>
+            <MenuItem value="">Tất cả</MenuItem>
+            <MenuItem value="pending">Chờ thanh toán</MenuItem>
+            <MenuItem value="paid">Đã thanh toán</MenuItem>
+            <MenuItem value="cancelled">Đã hủy</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <Button
+          variant="contained"
+          onClick={handleSearch}
+          sx={{ 
+            backgroundColor: '#667eea',
+            color: '#fff',
+            height: 40,
+            px: 3,
+            borderRadius: 1,
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#5a67d8',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }
+          }}
+        >
+          Tìm
+        </Button>
+
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={handleAdd}
+          sx={{
+            height: 40,
+            px: 2,
+            borderRadius: 1,
+            borderColor: '#667eea',
+            color: '#667eea',
+            textTransform: 'none',
+            whiteSpace: 'nowrap',
+            '&:hover': {
+              borderColor: '#5a67d8',
+              backgroundColor: 'rgba(102, 126, 234, 0.04)'
+            },
+          }}
+        >
+          Tạo đơn hàng
+        </Button>
+
+        <IconButton 
+          onClick={fetchOrders} 
+          sx={{ 
+            border: '1px solid #e2e8f0',
+            borderRadius: 1,
+            color: '#64748b',
+            height: 40,
+            width: 40,
+            '&:hover': {
+              backgroundColor: '#f8f9fa',
+              color: '#667eea',
+              borderColor: '#667eea'
+            }
+          }}
+        >
+          <RefreshIcon />
+        </IconButton>
       </Paper>
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Mã đơn</TableCell>
               <TableCell>Khách hàng</TableCell>
               <TableCell align="right">Tổng tiền</TableCell>
               <TableCell>Trạng thái</TableCell>
@@ -275,7 +407,7 @@ export default function Orders() {
                     <IconButton
                       size="small"
                       color="primary"
-                      onClick={() => alert(`Xem chi tiết đơn hàng #${order.code}`)}
+                      onClick={() => handleViewDetail(order)}
                       title="Xem chi tiết"
                     >
                       <ViewIcon fontSize="small" />
@@ -283,7 +415,7 @@ export default function Orders() {
                     <IconButton
                       size="small"
                       color="info"
-                      onClick={() => alert(`In hóa đơn #${order.code}`)}
+                      onClick={() => handlePrint(order)}
                       title="In hóa đơn"
                     >
                       <PrintIcon fontSize="small" />
@@ -318,6 +450,14 @@ export default function Orders() {
         onClose={() => setPaymentDialogOpen(false)}
         order={selectedOrder}
         onSuccess={handlePaymentSuccess}
+      />
+
+      <OrderDetailDialog
+        open={detailDialogOpen}
+        onClose={handleDetailClose}
+        order={selectedOrderForDetail}
+        onPrint={handlePrint}
+        onPayment={handlePayment}
       />
 
       <Notification
