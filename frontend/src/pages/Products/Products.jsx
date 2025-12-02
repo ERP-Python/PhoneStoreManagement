@@ -440,7 +440,7 @@ export default function Products() {
 
       <ProductForm
         open={formOpen}
-        onClose={() => { handleFormClose(); handleChangePage(); }}
+        onClose={handleFormClose}
         product={selectedProduct}
         onSuccess={handleFormSuccess}
       />
