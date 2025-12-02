@@ -49,6 +49,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState({})
   const [uploadingImages, setUploadingImages] = useState(false)
+  const [originalVariants, setOriginalVariants] = useState([])
 
   // Utility function to get first character of color and uppercase it
   const getColorCode = (color) => {
@@ -78,18 +79,19 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
       fetchBrands()
       if (product) {
         // Edit mode
-        setFormData({
+        const newFormData = {
           name: product.name || '',
           sku: product.sku || '',
           barcode: product.barcode || '',
           brand: product.brand?.id || product.brand || '',
           description: product.description || '',
           is_active: product.is_active !== undefined ? product.is_active : true
-        })
+        }
+        setFormData(newFormData)
 
         // Load variants if available
         if (product.variants && product.variants.length > 0) {
-          setVariants(product.variants.map(v => ({
+          const loadedVariants = product.variants.map(v => ({
             id: v.id,
             ram: v.ram || '',
             rom: v.rom || '',
@@ -99,11 +101,16 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
             displayPrice: formatPrice(v.price || ''),
             is_active: v.is_active !== undefined ? v.is_active : true,
             skuManuallySet: true, // SKU from DB is considered manually set
-            images: v.images || [],
+            images: v.images ? JSON.parse(JSON.stringify(v.images)) : [],
             uploadedImages: []
-          })))
+          }))
+          setVariants(loadedVariants)
+          // Save a deep copy of original variants for restoration on cancel
+          setOriginalVariants(JSON.parse(JSON.stringify(loadedVariants)))
         } else {
-          setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true, images: [], uploadedImages: [] }])
+          const emptyVariant = [{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true, images: [], uploadedImages: [] }]
+          setVariants(emptyVariant)
+          setOriginalVariants(JSON.parse(JSON.stringify(emptyVariant)))
         }
       } else {
         // Add mode - reset form
@@ -115,7 +122,9 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           description: '',
           is_active: true
         })
-        setVariants([{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true, images: [], uploadedImages: [] }])
+        const emptyVariant = [{ ram: '', rom: '', color: '', sku: '', price: '', displayPrice: '', is_active: true, images: [], uploadedImages: [] }]
+        setVariants(emptyVariant)
+        setOriginalVariants(JSON.parse(JSON.stringify(emptyVariant)))
         setProductSuggestions([])
       }
       setError(null)
@@ -352,31 +361,26 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
     setVariants(newVariants)
   }
 
-  const handleRemoveImage = async (variantIndex, imageId) => {
-    const variant = variants[variantIndex]
-
-    // If variant has an ID, delete from server
-    if (variant.id) {
-      try {
-        // Extract image number from imageId (format: productId_variantId_imageNumber)
-        const imageNumber = imageId.split('_')[2]?.split('.')[0]
-
-        if (imageNumber) {
-          await api.delete(`/products/variants/${variant.id}/delete_image/`, {
-            data: { image_number: imageNumber }
-          })
-        }
-      } catch (err) {
-        console.error('Error deleting image:', err)
-        setError('Không thể xóa ảnh. Vui lòng thử lại.')
-        return
-      }
-    }
-
-    // Remove from local state
+  const handleRemoveImage = (variantIndex, imageId) => {
+    // Only remove from local state - actual deletion happens on save
     const newVariants = [...variants]
     newVariants[variantIndex].images = newVariants[variantIndex].images.filter(img => img.id !== imageId)
+    
+    // Mark image for deletion on save
+    if (!newVariants[variantIndex].imagesToDelete) {
+      newVariants[variantIndex].imagesToDelete = []
+    }
+    newVariants[variantIndex].imagesToDelete.push(imageId)
+    
     setVariants(newVariants)
+  }
+
+  const handleDialogClose = () => {
+    // Restore original variants if user cancels
+    if (originalVariants.length > 0) {
+      setVariants(JSON.parse(JSON.stringify(originalVariants)))
+    }
+    onClose()
   }
 
   const uploadVariantImages = async (variantId, files) => {
@@ -505,6 +509,24 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           let variantId = variant.id
 
           if (variant.id) {
+            // Delete images marked for deletion
+            if (variant.imagesToDelete && variant.imagesToDelete.length > 0) {
+              for (const imageId of variant.imagesToDelete) {
+                try {
+                  // Extract image number from imageId (format: productId_variantId_imageNumber)
+                  const imageNumber = imageId.split('_')[2]?.split('.')[0]
+                  if (imageNumber) {
+                    await api.delete(`/products/variants/${variant.id}/delete_image/`, {
+                      data: { image_number: imageNumber }
+                    })
+                  }
+                } catch (err) {
+                  console.error('Error deleting image:', err)
+                  // Continue with other operations even if image deletion fails
+                }
+              }
+            }
+            
             // Update existing variant
             await api.put(`/products/variants/${variant.id}/`, variantData)
           } else {
@@ -578,7 +600,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} {...productFormStyles.dialog}>
+    <Dialog open={open} onClose={handleDialogClose} {...productFormStyles.dialog}>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
           {product ? 'Chỉnh sửa Sản phẩm' : 'Thêm Sản phẩm mới'}
@@ -615,10 +637,11 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
 
             <Grid item xs={12} sm={6}>
               <Autocomplete
+                key={product?.id || 'new'}
                 freeSolo
                 options={productSuggestions}
                 getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
-                value={formData.name}
+                inputValue={formData.name}
                 onChange={handleProductSelect}
                 onInputChange={(event, newInputValue) => {
                   setFormData(prev => ({ ...prev, name: newInputValue }))
@@ -930,7 +953,7 @@ export default function ProductForm({ open, onClose, product, onSuccess }) {
           ))}
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} disabled={loading}>
+          <Button onClick={handleDialogClose} disabled={loading}>
             Hủy
           </Button>
           <Button type="submit" variant="contained" disabled={loading}>
