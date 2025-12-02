@@ -208,7 +208,6 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
         </Box>
 
         {change && (
-          // Đã sửa: Giảm margin top từ 2 xuống 1.5 để kéo phần chip lên gần số tiền hơn
           <Box sx={{ display: 'flex', alignItems: 'center', mt: 1.5 }}>
             <Chip
               icon={changeType === 'increase' ? <TrendingUp sx={{ fontSize: '0.9rem !important' }} /> : <TrendingDown sx={{ fontSize: '0.9rem !important' }} />}
@@ -216,7 +215,7 @@ function StatCard({ title, value, icon, color = 'primary', change, changeType, c
               size="small"
               color={changeType === 'increase' ? 'success' : 'error'}
               sx={{
-                height: 22, // Chip nhỏ lại xíu
+                height: 22, 
                 fontWeight: 600,
                 fontSize: '0.75rem',
                 backgroundColor: changeType === 'increase' ? '#e8f5e9' : '#ffebee',

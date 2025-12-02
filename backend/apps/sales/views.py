@@ -558,6 +558,61 @@ def vnpay_ipn(request):
 # Additional VNPay utility views
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def vnpay_debug(request):
+    """
+    Debug endpoint to verify VNPay configuration
+    """
+    vnpay = VNPayService()
+    
+    logger.info("=" * 80)
+    logger.info("VNPAY DEBUG INFO REQUEST")
+    logger.info("=" * 80)
+    logger.info(f"TMN Code: {vnpay.vnp_tmn_code}")
+    logger.info(f"Hash Secret: {vnpay.vnp_hash_secret[:20]}... (hidden for security)")
+    logger.info(f"Payment URL: {vnpay.vnp_payment_url}")
+    logger.info(f"Return URL: {vnpay.vnp_return_url}")
+    logger.info(f"Is Sandbox: {vnpay.is_sandbox_mode()}")
+    logger.info("=" * 80)
+    
+    # Create test payment URL
+    try:
+        test_order_code = f"DEBUG-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        test_amount = 50000  # 50,000 VND
+        test_ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
+        
+        test_url = vnpay.create_payment_url(
+            order_code=test_order_code,
+            amount=test_amount,
+            order_desc="Debug test payment",
+            ip_addr=test_ip
+        )
+        
+        return Response({
+            'status': 'SUCCESS',
+            'tmn_code': vnpay.vnp_tmn_code,
+            'hash_secret_first_20_chars': vnpay.vnp_hash_secret[:20] + '...',
+            'payment_url': vnpay.vnp_payment_url,
+            'return_url': vnpay.vnp_return_url,
+            'is_sandbox': vnpay.is_sandbox_mode(),
+            'test_order_code': test_order_code,
+            'test_payment_url': test_url,
+            'test_amount': test_amount,
+            'client_ip': test_ip,
+            'message': 'VNPay configuration is CORRECT. Test URL generated successfully.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in vnpay_debug: {str(e)}")
+        return Response({
+            'status': 'ERROR',
+            'error': str(e),
+            'tmn_code': vnpay.vnp_tmn_code,
+            'message': 'VNPay configuration ERROR. Check backend logs for details.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def vnpay_config(request):
     """
     Get VNPay configuration for frontend
@@ -570,7 +625,78 @@ def vnpay_config(request):
         'return_url': vnpay.vnp_return_url,
         'banks': vnpay.get_bank_list(),
         'payment_methods': vnpay.get_payment_methods(),
-    }) 
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def vnpay_test_connection(request):
+    """
+    Test VNPay connection and configuration
+    Shows detailed info about VNPay setup
+    """
+    from django.conf import settings
+    
+    logger.info("=" * 80)
+    logger.info("VNPAY TEST CONNECTION REQUEST")
+    logger.info("=" * 80)
+    
+    vnpay = VNPayService()
+    
+    test_results = {
+        'status': 'OK',
+        'timestamp': datetime.now().isoformat(),
+        'configuration': {
+            'tmn_code': vnpay.vnp_tmn_code,
+            'hash_secret_preview': vnpay.vnp_hash_secret[:20] + '...' if len(vnpay.vnp_hash_secret) > 20 else '***',
+            'payment_url': vnpay.vnp_payment_url,
+            'return_url': vnpay.vnp_return_url,
+            'is_sandbox': vnpay.is_sandbox_mode(),
+            'environment': 'SANDBOX' if vnpay.is_sandbox_mode() else 'PRODUCTION',
+        },
+        'validation': {
+            'tmn_code_present': bool(vnpay.vnp_tmn_code),
+            'hash_secret_present': bool(vnpay.vnp_hash_secret),
+            'payment_url_valid': vnpay.vnp_payment_url.startswith('https://'),
+            'return_url_valid': 'localhost' in vnpay.vnp_return_url or 'http' in vnpay.vnp_return_url,
+        },
+        'test_payment': {
+            'test_order_code': f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            'test_amount': 50000,
+            'message': 'Test payment URL generation'
+        },
+    }
+    
+    # Try to create test payment URL
+    try:
+        test_order_code = test_results['test_payment']['test_order_code']
+        test_amount = test_results['test_payment']['test_amount']
+        
+        test_url = vnpay.create_payment_url(
+            order_code=test_order_code,
+            amount=test_amount,
+            order_desc="Connection test",
+            ip_addr=request.META.get('REMOTE_ADDR', '127.0.0.1')
+        )
+        
+        test_results['test_payment']['url_generated'] = True
+        test_results['test_payment']['url_length'] = len(test_url)
+        test_results['test_payment']['url_preview'] = test_url[:100] + '...'
+        test_results['test_payment']['full_url'] = test_url
+        
+        logger.info(f"✅ Test payment URL generated successfully")
+        logger.info(f"URL length: {len(test_url)}")
+        logger.info(f"Order code: {test_order_code}")
+        
+    except Exception as e:
+        test_results['status'] = 'ERROR'
+        test_results['test_payment']['url_generated'] = False
+        test_results['test_payment']['error'] = str(e)
+        logger.error(f"❌ Error generating test payment URL: {str(e)}")
+    
+    logger.info("=" * 80)
+    
+    return Response(test_results)
 
 
 
