@@ -16,6 +16,7 @@ from .serializers import (
     OrderSerializer, PaymentSerializer, StockOutSerializer
 )
 from .vnpay import VNPayService
+from config.pagination import StandardResultsSetPagination
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     ).prefetch_related('items__product_variant__product__brand')
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['code', 'customer__name', 'customer__phone']
     ordering_fields = ['created_at', 'total']
@@ -372,6 +374,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Payment.objects.all().select_related('order')
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['order__code', 'txn_code']
     ordering_fields = ['created_at', 'amount']
@@ -400,6 +403,7 @@ class StockOutViewSet(viewsets.ReadOnlyModelViewSet):
     ).prefetch_related('items__product_variant__product__brand')
     serializer_class = StockOutSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['code', 'order__code']
     ordering_fields = ['created_at']
