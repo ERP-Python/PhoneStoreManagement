@@ -579,7 +579,7 @@ export default function Brands() {
         brand={selectedBrandForDetail}
       />
 
-      
+
 
       <Notification
         open={notification.open}
@@ -590,4 +590,6 @@ export default function Brands() {
     </Box>
   )
 }
+
+
 
