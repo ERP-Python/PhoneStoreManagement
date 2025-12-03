@@ -71,7 +71,7 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
             is_active=True,
             variants__is_active=True,
             variants__inventory__isnull=False
-        ).select_related('brand').distinct()
+        ).select_related('brand').prefetch_related('images').distinct()
         
         # Apply search filter
         if search:
@@ -167,11 +167,17 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
             images = product.images.all().order_by('-is_primary', 'sort_order', 'created_at')
             product_images = []
             for img in images:
+                try:
+                    img_url = img.image.url if img.image else ''
+                except Exception:
+                    img_url = ''
+                
                 product_images.append({
                     'id': img.id,
-                    'url': img.image.url if img.image else '',
-                    'alt': getattr(img, 'alt', f"{product.name} image"),
-                    'is_primary': getattr(img, 'is_primary', False)
+                    'url': img_url,
+                    'alt': img.alt if hasattr(img, 'alt') and img.alt else f"{product.name} image",
+                    'is_primary': img.is_primary if hasattr(img, 'is_primary') else False,
+                    'sort_order': img.sort_order if hasattr(img, 'sort_order') else 0
                 })
             
             result_data.append({
@@ -185,6 +191,7 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
                 'variants_count': variants.count(),
                 'variants': variants_data,
                 'images': product_images,
+                'images_count': len(product_images),
                 'status': status_data
             })
         
@@ -193,6 +200,52 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
             'page': page,
             'page_size': page_size,
             'results': result_data
+        })
+    
+    @action(detail=False, methods=['get'])
+    def inventory_stats(self, request):
+        """
+        Get detailed inventory statistics
+        """
+        products = Product.objects.filter(is_active=True).distinct()
+        total_products = products.count()
+        
+        # Count variants
+        from apps.catalog.models import ProductVariant
+        total_variants = ProductVariant.objects.filter(is_active=True).count()
+        
+        # Calculate stock totals
+        total_stock = Inventory.objects.aggregate(
+            total=Coalesce(Sum('on_hand'), 0)
+        )['total']
+        
+        # Count by status
+        out_of_stock = Inventory.objects.filter(on_hand=0).count()
+        low_stock = Inventory.objects.filter(on_hand__gt=0, on_hand__lte=10).count()
+        normal_stock = Inventory.objects.filter(on_hand__gt=10).count()
+        
+        # Most stocked products
+        from django.db.models import Sum as SumAggregate
+        top_products = products.annotate(
+            total_qty=SumAggregate('variants__inventory__on_hand')
+        ).order_by('-total_qty')[:5]
+        
+        top_products_data = []
+        for p in top_products:
+            top_products_data.append({
+                'id': p.id,
+                'name': p.name,
+                'total_stock': p.total_qty or 0
+            })
+        
+        return Response({
+            'total_products': total_products,
+            'total_variants': total_variants,
+            'total_stock': total_stock,
+            'out_of_stock_count': out_of_stock,
+            'low_stock_count': low_stock,
+            'normal_stock_count': normal_stock,
+            'top_products': top_products_data
         })
     
     @action(detail=False, methods=['get'])
