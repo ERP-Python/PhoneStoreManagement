@@ -299,7 +299,7 @@ export default function Inventory() {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Số hàng mỗi trang:"
+          labelRowsPerPage="Số hàng ở mỗi trang :"
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} trong ${count}`}
         />
       </TableContainer>
@@ -589,25 +589,8 @@ export default function Inventory() {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5, backgroundColor: '#f8f9fa', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button 
-            onClick={handleCloseDialog} 
-            variant="contained" 
-            sx={{ 
-              backgroundColor: '#667eea', 
-              color: '#fff',
-              fontWeight: 600,
-              px: 3,
-              py: 1.2,
-              borderRadius: 1,
-              textTransform: 'none',
-              fontSize: '1rem',
-              '&:hover': {
-                backgroundColor: '#5a67d8',
-                boxShadow: '0 4px 12px rgba(102,126,234,0.4)'
-              }
-            }}
-          >
+        <DialogActions>
+          <Button onClick={handleCloseDialog} variant="contained" sx={{ backgroundColor: '#667eea', color: '#fff' }}>
             Đóng
           </Button>
         </DialogActions>
