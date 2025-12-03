@@ -161,7 +161,7 @@ export default function StockIn() {
         source: 'MANUAL',
         reference_id: null,
         supplier_id: '',
-        note: 'Nhập kho cho sản phẩm sắp hết hàng',
+        note: 'Nhập kho cho sản phẩm sắp hết hàng !',
         items: items
       })
 
@@ -210,7 +210,7 @@ export default function StockIn() {
       console.error('Error fetching stock in detail:', err)
       setNotification({
         open: true,
-        message: 'Không thể tải chi tiết phiếu nhập kho',
+        message: 'Không thể tải chi tiết phiếu nhập kho!',
         severity: 'error'
       })
     }
@@ -234,13 +234,11 @@ export default function StockIn() {
     let processedValue = value
 
     if (field === 'unit_cost') {
-      // Remove all dots and keep only numbers
       const cleanValue = value.toString().replace(/\./g, '').replace(/[^0-9]/g, '')
       processedValue = cleanValue === '' ? '' : parseInt(cleanValue) || 0
     } else if (field === 'qty') {
       processedValue = parseInt(value) || 1
     } else if (field === 'product_variant') {
-      // Tự động điền giá khi chọn sản phẩm
       const selectedProduct = products.find(p => p.id === value)
       if (selectedProduct && selectedProduct.price) {
         setFormData(prev => ({
@@ -264,7 +262,6 @@ export default function StockIn() {
 
   const handleFormSubmit = async () => {
     try {
-      // Validate
       if (!formData.items || formData.items.length === 0) {
         setNotification({
           open: true,
@@ -274,7 +271,6 @@ export default function StockIn() {
         return
       }
 
-      // Check if all items have product_variant
       const invalidItems = formData.items.filter(item => !item.product_variant)
       if (invalidItems.length > 0) {
         setNotification({
@@ -285,7 +281,6 @@ export default function StockIn() {
         return
       }
 
-      // Validate and clean data
       const cleanedData = {
         ...formData,
         items: formData.items.map(item => ({
@@ -298,18 +293,15 @@ export default function StockIn() {
       console.log('Submitting stock in data:', cleanedData)
       const response = await api.post('/stock-in/', cleanedData)
       
-      // Save supplier mapping for the new stockIn
       const newStockIn = response.data
       if (newStockIn && newStockIn.id && formData.supplier_id) {
         setStockInSuppliers(prev => ({
           ...prev,
           [newStockIn.id]: formData.supplier_id
         }))
-        // Add new stockIn to top of list immediately
         setStockIns(prev => [newStockIn, ...prev])
         setTotalCount(prev => prev + 1)
       } else {
-        // Fallback: refetch the list
         fetchStockIns()
       }
       
@@ -513,7 +505,6 @@ export default function StockIn() {
       )}
 
 
-      {/* Create Form Dialog */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Tạo phiếu nhập kho mới</DialogTitle>
         <DialogContent>
@@ -640,7 +631,6 @@ export default function StockIn() {
         </DialogActions>
       </Dialog>
 
-      {/* Detail Dialog */}
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Chi tiết phiếu nhập kho</DialogTitle>
         <DialogContent>
