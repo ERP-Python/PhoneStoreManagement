@@ -31,12 +31,99 @@ class BrandViewSet(viewsets.ModelViewSet):
         return queryset
     
     def perform_create(self, serializer):
-        """Handle brand creation with logo upload"""
+        """Handle brand creation"""
         serializer.save()
     
     def perform_update(self, serializer):
-        """Handle brand update with logo upload"""
+        """Handle brand update"""
         serializer.save()
+    
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_logo(self, request, pk=None):
+        """Upload logo for a brand - support jpg and svg"""
+        brand = self.get_object()
+        
+        # Get uploaded file
+        logo = request.FILES.get('logo')
+        
+        if not logo:
+            return Response(
+                {'error': 'No logo provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Determine file extension
+        file_name = logo.name.lower()
+        if file_name.endswith('.svg'):
+            file_ext = 'svg'
+        elif file_name.endswith(('.jpg', '.jpeg')):
+            file_ext = 'jpg'
+        else:
+            return Response(
+                {'error': 'Only JPG and SVG files are supported'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create directory structure: brands/{brand_id}/
+        upload_path = os.path.join(
+            settings.BASE_DIR,
+            'apps', 'assets', 'images', 'brands',
+            str(brand.id)
+        )
+        
+        # Create directories if they don't exist
+        os.makedirs(upload_path, exist_ok=True)
+        
+        # Remove old logo files (both jpg and svg) before saving new one
+        for ext in ['jpg', 'svg']:
+            old_file = os.path.join(upload_path, f'1.{ext}')
+            if os.path.exists(old_file):
+                os.remove(old_file)
+        
+        # Save logo as 1.jpg or 1.svg
+        file_path = os.path.join(upload_path, f'1.{file_ext}')
+        
+        # Save the file
+        with open(file_path, 'wb+') as destination:
+            for chunk in logo.chunks():
+                destination.write(chunk)
+        
+        logo_url = f'/assets/images/brands/{brand.id}/1.{file_ext}'
+        
+        return Response({
+            'message': 'Logo uploaded successfully',
+            'logo': logo_url
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['delete'])
+    def delete_logo(self, request, pk=None):
+        """Delete logo for a brand - support both jpg and svg"""
+        brand = self.get_object()
+        
+        deleted = False
+        # Try to delete both jpg and svg
+        for ext in ['jpg', 'svg']:
+            file_path = os.path.join(
+                settings.BASE_DIR,
+                'apps', 'assets', 'images', 'brands',
+                str(brand.id),
+                f'1.{ext}'
+            )
+            
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                deleted = True
+        
+        if deleted:
+            return Response(
+                {'message': 'Logo deleted successfully'},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {'error': 'Logo not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class ProductViewSet(viewsets.ModelViewSet):

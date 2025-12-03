@@ -53,9 +53,10 @@ export default function Brands() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    logo: null,
     is_active: true
   })
+  const [logoFile, setLogoFile] = useState(null)
+  const [logoPreview, setLogoPreview] = useState(null)
 
   const fetchBrands = async () => {
     try {
@@ -106,9 +107,10 @@ export default function Brands() {
     setFormData({
       name: '',
       description: '',
-      logo: null,
       is_active: true
     })
+    setLogoFile(null)
+    setLogoPreview(null)
     setFormOpen(true)
   }
 
@@ -117,9 +119,10 @@ export default function Brands() {
     setFormData({
       name: brand.name,
       description: brand.description || '',
-      logo: null,
       is_active: brand.is_active
     })
+    setLogoFile(null)
+    setLogoPreview(brand.logo || null)
     setFormOpen(true)
   }
 
@@ -153,27 +156,60 @@ export default function Brands() {
 
   const handleFormSubmit = async () => {
     try {
-      const formDataToSend = new FormData()
-      formDataToSend.append('name', formData.name)
-      formDataToSend.append('description', formData.description)
-      formDataToSend.append('is_active', formData.is_active)
-      
-      if (formData.logo && typeof formData.logo !== 'string') {
-        formDataToSend.append('logo', formData.logo)
+      // First, create or update the brand with text data only
+      let brand
+      if (selectedBrand) {
+        const response = await api.patch(`/brands/${selectedBrand.id}/`, {
+          name: formData.name,
+          description: formData.description,
+          is_active: formData.is_active
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        brand = response.data
+      } else {
+        const response = await api.post('/brands/', {
+          name: formData.name,
+          description: formData.description,
+          is_active: formData.is_active
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        brand = response.data
       }
 
-      if (selectedBrand) {
-        await api.patch(`/brands/${selectedBrand.id}/`, formDataToSend)
-        setNotification({
-          open: true,
-          message: 'Cập nhật thương hiệu thành công',
-          severity: 'success'
-        })
+      // Upload logo if a file was selected
+      if (logoFile && brand.id) {
+        const logoFormData = new FormData()
+        logoFormData.append('logo', logoFile)
+        
+        try {
+          await api.post(`/brands/${brand.id}/upload_logo/`, logoFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+          setNotification({
+            open: true,
+            message: selectedBrand ? 'Cập nhật thương hiệu và logo thành công' : 'Thêm thương hiệu và logo thành công',
+            severity: 'success'
+          })
+        } catch (err) {
+          console.error('Error uploading logo:', err)
+          setNotification({
+            open: true,
+            message: 'Thương hiệu đã lưu nhưng không thể tải logo lên',
+            severity: 'warning'
+          })
+        }
       } else {
-        await api.post('/brands/', formDataToSend)
         setNotification({
           open: true,
-          message: 'Thêm thương hiệu thành công',
+          message: selectedBrand ? 'Cập nhật thương hiệu thành công' : 'Thêm thương hiệu thành công',
           severity: 'success'
         })
       }
@@ -184,18 +220,56 @@ export default function Brands() {
       console.error('Error saving brand:', err)
       setNotification({
         open: true,
-        message: err.response?.data?.detail || 'Không thể lưu thương hiệu',
+        message: err.response?.data?.detail || err.response?.data?.name?.[0] || 'Không thể lưu thương hiệu',
         severity: 'error'
       })
     }
   }
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked, files } = e.target
+    const { name, value, type, checked } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : type === 'file' ? files[0] : value
+      [name]: type === 'checkbox' ? checked : value
     }))
+  }
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setLogoFile(file)
+      // Create preview URL
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setLogoPreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemoveLogo = async () => {
+    if (selectedBrand && selectedBrand.logo) {
+      try {
+        await api.delete(`/brands/${selectedBrand.id}/delete_logo/`)
+        setLogoPreview(null)
+        setNotification({
+          open: true,
+          message: 'Xóa logo thành công',
+          severity: 'success'
+        })
+        fetchBrands()
+      } catch (err) {
+        console.error('Error deleting logo:', err)
+        setNotification({
+          open: true,
+          message: 'Không thể xóa logo',
+          severity: 'error'
+        })
+      }
+    } else {
+      setLogoFile(null)
+      setLogoPreview(null)
+    }
   }
 
   return (
@@ -444,25 +518,50 @@ export default function Brands() {
               />
             </Grid>
             <Grid item xs={12}>
-              <Button
-                variant="outlined"
-                component="label"
-                fullWidth
-              >
-                Upload Logo
-                <input
-                  type="file"
-                  name="logo"
-                  hidden
-                  accept="image/*"
-                  onChange={handleInputChange}
-                />
-              </Button>
-              {formData.logo && (
-                <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
-                  {typeof formData.logo === 'string' ? formData.logo : formData.logo.name}
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Logo thương hiệu
                 </Typography>
-              )}
+                {logoPreview ? (
+                  <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                    <Avatar
+                      src={logoPreview}
+                      alt="Logo preview"
+                      variant="rounded"
+                      sx={{ width: 120, height: 120, mb: 1 }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={handleRemoveLogo}
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        bgcolor: 'error.main',
+                        color: 'white',
+                        '&:hover': { bgcolor: 'error.dark' }
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<AddIcon />}
+                    fullWidth
+                  >
+                    Tải lên Logo
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/jpeg,image/jpg,image/svg+xml"
+                      onChange={handleLogoChange}
+                    />
+                  </Button>
+                )}
+              </Box>
             </Grid>
           </Grid>
         </DialogContent>
