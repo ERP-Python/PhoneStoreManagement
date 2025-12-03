@@ -5,6 +5,9 @@ Django settings for phone store management system.
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import pymysql
+pymysql.install_as_MySQLdb()
+
 
 # Load environment variables
 load_dotenv()
@@ -84,7 +87,7 @@ DATABASES = {
         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
         'NAME': os.getenv('DB_NAME', 'phone_store'),
         'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'khanh20062003'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
