@@ -137,7 +137,7 @@ export default function Suppliers() {
       await api.delete(`/suppliers/${id}/`)
       setNotification({
         open: true,
-        message: 'Xóa nhà cung cấp thành công',
+        message: 'Xóa nhà cung cấp thành công !',
         severity: 'success'
       })
       fetchSuppliers()
