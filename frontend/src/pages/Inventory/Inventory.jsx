@@ -564,10 +564,7 @@ export default function Inventory() {
                         </Typography>
                       </Box>
                       <Box>
-                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontWeight: 500 }}>Đã đặt</Typography>
-                        <Typography variant="h6" fontWeight={700} sx={{ color: '#ea580c' }}>
-                          {variant.reserved}
-                        </Typography>
+                        <
                       </Box>
                       <Box>
                         <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontWeight: 500 }}>Có thể bán</Typography>
