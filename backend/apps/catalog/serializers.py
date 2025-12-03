@@ -4,15 +4,20 @@ from .models import Brand, Product, ProductVariant, ProductImage, Imei
 
 class BrandSerializer(serializers.ModelSerializer):
     products_count = serializers.SerializerMethodField()
+    logo = serializers.SerializerMethodField()
 
     class Meta:
         model = Brand
         fields = ['id', 'name', 'slug', 'description', 'logo', 'is_active', 
                   'products_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at', 'logo']
 
     def get_products_count(self, obj):
         return obj.products.filter(is_active=True).count()
+    
+    def get_logo(self, obj):
+        """Get logo URL from file system"""
+        return obj.logo_url
     
     def create(self, validated_data):
         # Auto-generate slug from name if not provided

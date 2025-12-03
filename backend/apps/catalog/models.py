@@ -14,6 +14,24 @@ class Brand(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def logo_url(self):
+        """Get logo URL from file system - support both jpg and svg"""
+        import os
+        base_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'assets', 'images', 'brands',
+            str(self.id)
+        )
+        
+        # Check for jpg first, then svg
+        for ext in ['jpg', 'svg']:
+            file_path = os.path.join(base_path, f'1.{ext}')
+            if os.path.exists(file_path):
+                return f'/assets/images/brands/{self.id}/1.{ext}'
+        
+        return None
+
     class Meta:
         db_table = 'brands'
         ordering = ['name']
