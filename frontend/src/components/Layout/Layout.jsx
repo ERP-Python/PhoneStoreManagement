@@ -36,8 +36,7 @@ import {
   Category,
   Business,
   LocalShipping,
-  MoveToInbox,
-  Search
+  MoveToInbox
 } from '@mui/icons-material'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
@@ -182,35 +181,8 @@ export default function Layout() {
               </Typography> */}
             </Box>
 
-            {/* Central Search Bar */}
-            <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', px: 2 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                bgcolor: '#f1f5f9', 
-                borderRadius: '12px', 
-                px: 2, 
-                py: 1, 
-                width: '100%', 
-                maxWidth: 500,
-                transition: 'all 0.2s',
-                '&:hover': {
-                  bgcolor: '#e2e8f0',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                },
-                '&:focus-within': {
-                  bgcolor: '#fff',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
-                  border: '1px solid #e2e8f0'
-                }
-              }}>
-                <Search sx={{ color: '#94a3b8', mr: 1 }} />
-                <InputBase 
-                  placeholder="Tìm kiếm..." 
-                  sx={{ flex: 1, fontSize: '0.95rem' }} 
-                />
-              </Box>
-            </Box>
+            {/* Spacer to push items to the right */}
+            <Box sx={{ flex: 1 }} />
 
             {/* Mobile menu button */}
             <IconButton

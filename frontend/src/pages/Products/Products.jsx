@@ -399,7 +399,7 @@ export default function Products() {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={product.is_active ? 'Hoạt động' : 'Ngưng'}
+                      label={product.is_active ? 'Hoạt động' : 'Ngưng hoạt động'}
                       color={product.is_active ? 'success' : 'default'}
                       {...productsStyles.statusChip}
                     />

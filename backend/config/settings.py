@@ -48,7 +48,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -176,10 +175,12 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # VNPay Configuration - Sandbox
-VNPAY_TMN_CODE = 'XCO6J35O'
-VNPAY_HASH_SECRET_KEY = os.getenv('VNPAY_HASH_SECRET_KEY', 'QSLJAQXHA0E0NUOPI7XG9O5DVODCGRJD')
-VNPAY_RETURN_URL = os.getenv('VNPAY_RETURN_URL', 'http://localhost:8000/api/payments/vnpay/return/')
-VNPAY_PAYMENT_URL = os.getenv('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html')
+# Merchant Account: anhkhoa.271103@gmail.com
+# Dashboard: https://sandbox.vnpayment.vn/merchantv2/
+VNPAY_TMN_CODE = 'P53XLHZ9'  # HARD-CODED - Do not use os.getenv for now
+VNPAY_HASH_SECRET_KEY = '5FGUW228ZOY6NG92F0FVI3TDHB3FYRQ3'  # HARD-CODED
+VNPAY_RETURN_URL = 'http://localhost:8000/api/payments/vnpay/return/'
+VNPAY_PAYMENT_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'
 
 # Legacy support for old variable name
 VNPAY_HASH_SECRET = VNPAY_HASH_SECRET_KEY

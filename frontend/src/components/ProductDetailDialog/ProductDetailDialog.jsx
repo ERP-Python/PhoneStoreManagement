@@ -76,7 +76,28 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
     const hasImages = images.length > 0
 
     // Get unique ROM and Color options
-    const romOptions = [...new Set(variants.map(v => v.rom))].filter(Boolean)
+    const uniqueRomOptions = [...new Set(variants.map(v => v.rom))].filter(Boolean)
+    
+    // Define standard ROM order
+    const standardRomOrder = ['32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB']
+    
+    // Sort ROM options: standard sizes first in order, then others
+    const romOptions = uniqueRomOptions.sort((a, b) => {
+        const indexA = standardRomOrder.indexOf(a)
+        const indexB = standardRomOrder.indexOf(b)
+        
+        // Both are standard sizes
+        if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB
+        }
+        // Only a is standard
+        if (indexA !== -1) return -1
+        // Only b is standard
+        if (indexB !== -1) return 1
+        // Neither is standard, sort alphabetically
+        return a.localeCompare(b)
+    })
+    
     const colorOptions = [...new Set(variants.map(v => v.color))].filter(Boolean)
 
     // Check if a color is available for selected ROM
@@ -259,14 +280,6 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                             })}
                                             {images.length > thumbnailStartIndex + 4 && (
                                                 <Box
-                                                    onClick={() => {
-                                                        const nextStart = thumbnailStartIndex + 4
-                                                        if (nextStart >= images.length) {
-                                                            setThumbnailStartIndex(0)
-                                                        } else {
-                                                            setThumbnailStartIndex(nextStart)
-                                                        }
-                                                    }}
                                                     sx={{
                                                         width: 60,
                                                         height: 60,
@@ -312,7 +325,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                 {/* Status and Brand */}
                                 <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
                                     <Chip
-                                        label={product.is_active ? 'Hoạt động' : 'Ngưng'}
+                                        label={product.is_active ? 'Hoạt động' : 'Ngưng hoạt động'}
                                         color={product.is_active ? 'success' : 'default'}
                                         size="small"
                                     />

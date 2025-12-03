@@ -16,6 +16,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Get CSRF token first
+    const getCsrfToken = async () => {
+      try {
+        await api.get('/auth/csrf/')
+      } catch (error) {
+        console.error('Error getting CSRF token:', error)
+      }
+    }
+    
+    getCsrfToken()
     checkAuth()
   }, [])
 
