@@ -579,6 +579,8 @@ export default function Brands() {
         brand={selectedBrandForDetail}
       />
 
+      
+
       <Notification
         open={notification.open}
         message={notification.message}
