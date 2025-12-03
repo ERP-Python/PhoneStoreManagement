@@ -580,7 +580,6 @@ export default function Brands() {
       />
 
 
-
       <Notification
         open={notification.open}
         message={notification.message}
