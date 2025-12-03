@@ -467,7 +467,7 @@ export default function Reports() {
                 </FormControl>
               </Box>
 
-              <Grid container spacing={3} sx={{ mb: 4 }}>
+              {/* <Grid container spacing={3} sx={{ mb: 4 }}>
                 {topProducts.top_by_quantity?.slice(0, 4).map((product, index) => {
                   const medals = ['🥇', '🥈', '🥉', '⭐']
                   const bgGradients = [
@@ -555,7 +555,7 @@ export default function Reports() {
                     </Grid>
                   )
                 })}
-              </Grid>
+              </Grid> */}
 
               {topProducts.top_by_revenue?.length > 0 && (
                 <Box sx={{ mt: 4 }}>
