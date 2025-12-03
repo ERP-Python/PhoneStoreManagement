@@ -505,7 +505,6 @@ export default function StockIn() {
       )}
 
 
-      {/* Create Form Dialog */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Tạo phiếu nhập kho mới</DialogTitle>
         <DialogContent>
@@ -632,7 +631,6 @@ export default function StockIn() {
         </DialogActions>
       </Dialog>
 
-      {/* Detail Dialog */}
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Chi tiết phiếu nhập kho</DialogTitle>
         <DialogContent>
