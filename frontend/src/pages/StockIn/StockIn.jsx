@@ -161,7 +161,7 @@ export default function StockIn() {
         source: 'MANUAL',
         reference_id: null,
         supplier_id: '',
-        note: 'Nhập kho cho sản phẩm sắp hết hàng',
+        note: 'Nhập kho cho sản phẩm sắp hết hàng !',
         items: items
       })
 
@@ -210,7 +210,7 @@ export default function StockIn() {
       console.error('Error fetching stock in detail:', err)
       setNotification({
         open: true,
-        message: 'Không thể tải chi tiết phiếu nhập kho',
+        message: 'Không thể tải chi tiết phiếu nhập kho!',
         severity: 'error'
       })
     }
