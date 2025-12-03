@@ -308,7 +308,7 @@ export default function Inventory() {
       <Dialog 
         open={dialogOpen} 
         onClose={handleCloseDialog}
-        maxWidth="md"
+        maxWidth="sd"
         fullWidth
         PaperProps={{
           sx: {
