@@ -163,6 +163,17 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
                     'color': 'success'
                 }
             
+            # Get product images
+            images = product.images.all().order_by('-is_primary', 'sort_order', 'created_at')
+            product_images = []
+            for img in images:
+                product_images.append({
+                    'id': img.id,
+                    'url': img.image.url if img.image else '',
+                    'alt': getattr(img, 'alt', f"{product.name} image"),
+                    'is_primary': getattr(img, 'is_primary', False)
+                })
+            
             result_data.append({
                 'id': product.id,
                 'name': product.name,
@@ -173,6 +184,7 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
                 'total_available': total_available,
                 'variants_count': variants.count(),
                 'variants': variants_data,
+                'images': product_images,
                 'status': status_data
             })
         
