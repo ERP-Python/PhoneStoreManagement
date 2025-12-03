@@ -351,7 +351,8 @@ export default function Orders() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Khách hàng</TableCell>
+              <TableCell>Mã đơn hàng</TableCell>
+              <TableCell>Tên khách hàng</TableCell>
               <TableCell align="right">Tổng tiền</TableCell>
               <TableCell>Trạng thái</TableCell>
               <TableCell>Ngày tạo</TableCell>
@@ -361,13 +362,13 @@ export default function Orders() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <CircularProgress size={30} />
                 </TableCell>
               </TableRow>
             ) : orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <Typography variant="body2" color="text.secondary">
                     Không tìm thấy đơn hàng nào
                   </Typography>
