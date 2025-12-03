@@ -76,7 +76,28 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
     const hasImages = images.length > 0
 
     // Get unique ROM and Color options
-    const romOptions = [...new Set(variants.map(v => v.rom))].filter(Boolean)
+    const uniqueRomOptions = [...new Set(variants.map(v => v.rom))].filter(Boolean)
+    
+    // Define standard ROM order
+    const standardRomOrder = ['32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB']
+    
+    // Sort ROM options: standard sizes first in order, then others
+    const romOptions = uniqueRomOptions.sort((a, b) => {
+        const indexA = standardRomOrder.indexOf(a)
+        const indexB = standardRomOrder.indexOf(b)
+        
+        // Both are standard sizes
+        if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB
+        }
+        // Only a is standard
+        if (indexA !== -1) return -1
+        // Only b is standard
+        if (indexB !== -1) return 1
+        // Neither is standard, sort alphabetically
+        return a.localeCompare(b)
+    })
+    
     const colorOptions = [...new Set(variants.map(v => v.color))].filter(Boolean)
 
     // Check if a color is available for selected ROM
