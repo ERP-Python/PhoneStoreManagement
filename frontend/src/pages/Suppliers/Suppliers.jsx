@@ -388,7 +388,6 @@ export default function Suppliers() {
         )}
 
 
-      {/* Form Dialog */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           {selectedSupplier ? 'Sửa nhà cung cấp' : 'Thêm nhà cung cấp mới'}
