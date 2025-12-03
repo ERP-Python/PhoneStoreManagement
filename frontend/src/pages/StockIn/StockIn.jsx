@@ -271,7 +271,6 @@ export default function StockIn() {
         return
       }
 
-      // Check if all items have product_variant
       const invalidItems = formData.items.filter(item => !item.product_variant)
       if (invalidItems.length > 0) {
         setNotification({
@@ -282,7 +281,6 @@ export default function StockIn() {
         return
       }
 
-      // Validate and clean data
       const cleanedData = {
         ...formData,
         items: formData.items.map(item => ({
@@ -295,18 +293,15 @@ export default function StockIn() {
       console.log('Submitting stock in data:', cleanedData)
       const response = await api.post('/stock-in/', cleanedData)
       
-      // Save supplier mapping for the new stockIn
       const newStockIn = response.data
       if (newStockIn && newStockIn.id && formData.supplier_id) {
         setStockInSuppliers(prev => ({
           ...prev,
           [newStockIn.id]: formData.supplier_id
         }))
-        // Add new stockIn to top of list immediately
         setStockIns(prev => [newStockIn, ...prev])
         setTotalCount(prev => prev + 1)
       } else {
-        // Fallback: refetch the list
         fetchStockIns()
       }
       
