@@ -304,7 +304,7 @@ export default function ProductDetailDialog({ open, onClose, product: initialPro
                                 {/* Status and Brand */}
                                 <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
                                     <Chip
-                                        label={product.is_active ? 'Hoạt động' : 'Ngưng'}
+                                        label={product.is_active ? 'Hoạt động' : 'Ngưng hoạt động'}
                                         color={product.is_active ? 'success' : 'default'}
                                         size="small"
                                     />
