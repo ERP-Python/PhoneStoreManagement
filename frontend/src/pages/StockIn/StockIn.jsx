@@ -234,13 +234,11 @@ export default function StockIn() {
     let processedValue = value
 
     if (field === 'unit_cost') {
-      // Remove all dots and keep only numbers
       const cleanValue = value.toString().replace(/\./g, '').replace(/[^0-9]/g, '')
       processedValue = cleanValue === '' ? '' : parseInt(cleanValue) || 0
     } else if (field === 'qty') {
       processedValue = parseInt(value) || 1
     } else if (field === 'product_variant') {
-      // Tự động điền giá khi chọn sản phẩm
       const selectedProduct = products.find(p => p.id === value)
       if (selectedProduct && selectedProduct.price) {
         setFormData(prev => ({
@@ -264,7 +262,6 @@ export default function StockIn() {
 
   const handleFormSubmit = async () => {
     try {
-      // Validate
       if (!formData.items || formData.items.length === 0) {
         setNotification({
           open: true,
